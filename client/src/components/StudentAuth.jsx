@@ -26,11 +26,11 @@ export function StudentAuth({ onAuthenticated, addToast }) {
 
   // Quick Demo Auto-Fill
   const handleQuickFillDemo = () => {
-    setEmail('2025pietad012@poornima.org');
+    setEmail('2025pietad999@poornima.org');
     setPassword('piet@student2025');
     setMode('login');
     setError('');
-    addToast('Demo student credentials pre-filled (PIET25AD012 - Aarav Singhania).', 'info');
+    addToast('Demo student credentials pre-filled (PIET25AD999).', 'info');
   };
 
   const handleSubmit = async (e) => {
@@ -124,7 +124,7 @@ export function StudentAuth({ onAuthenticated, addToast }) {
             <Sparkles className="w-4 h-4 text-piet-600" />
             <div className="text-xs">
               <span className="font-bold text-slate-800 dark:text-slate-200">Demo Student: </span>
-              <span className="text-slate-600 dark:text-slate-400 font-mono">2025pietad012@poornima.org</span>
+              <span className="text-slate-600 dark:text-slate-400 font-mono">2025pietad999@poornima.org</span>
             </div>
           </div>
           <button

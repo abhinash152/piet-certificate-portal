@@ -11,7 +11,7 @@ A complete, responsive, production-quality web application where students upload
 - **Identity & Privacy Protection**:
   - Uses **College Email ID** as username with encrypted password hashing (`bcryptjs`).
   - Protects students against unauthorized modifications or deletions of achievements from peers who know their registration number.
-  - **Sample Demo Student**: `2025pietad012@poornima.org` / `piet@student2025` (Aarav Singhania, AI&DS, Sec A, II nd Year).
+  - **Sample Demo Student**: `2025pietad999@poornima.org` / `piet@student2025` (Demo Student, AI&DS, Sec A, II nd Year).
   - Includes a convenient 1-click **"Auto-Fill"** button for instant evaluation.
 - **Student Dashboard (`/me`)**:
   - View real-time **RTU / PIET SODECA Activity Marks Progress** (out of 50 marks, with live letter grades: O, A+, A, B, C).
@@ -28,7 +28,7 @@ A complete, responsive, production-quality web application where students upload
   - Direct guest submission without password has been completely removed to safeguard student records from unauthorized modification.
   - Every certificate submission requires sign-in with College Email ID + Password.
 - **Step 1 — Student Details & Verification**:
-  - Registration Number format example: `PIET25ADxxx` (e.g. `PIET25AD012`, `PIET25AD045`).
+  - Registration Number format example: `PIET25ADxxx` (e.g. `PIET25AD999`, `PIET25AD045`).
   - **8 Sections**: Total 8 configurable sections (`A`, `B`, `C`, `D`, `E`, `F`, `G`, `H`).
   - **Current Year**: Replaced academic session with Current Year selector (`I st Year`, `II nd Year`, `III rd Year`, `IV th Year`).
   - Department selection: `CS-Core`, `AI&DS`, `IOT`.

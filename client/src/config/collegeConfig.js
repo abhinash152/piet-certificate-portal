@@ -66,9 +66,9 @@ export const COLLEGE_CONFIG = {
   },
 
   // Registration Number formatting & validation rules
-  // Example format requested: PIET25ADxxx (e.g., PIET25AD012, PIET25CS045)
+  // Example format requested: PIET25ADxxx (e.g., PIET25AD999, PIET25CS045)
   regNo: {
-    placeholder: "e.g., PIET25ADxxx or PIET25AD012",
+    placeholder: "e.g., PIET25ADxxx or PIET25AD999",
     regex: /^[A-Za-z0-9]{6,16}$/,
     formatHelper: "College Reg No. format: PIET25ADxxx (6–16 alphanumeric characters)",
     errorMessage: "Please enter a valid Registration Number (e.g., PIET25ADxxx)",

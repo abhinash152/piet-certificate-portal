@@ -46,12 +46,12 @@ const studentDefaultPasswordHash = bcrypt.hashSync('piet@student2025', 10);
 // 2. Sample Students with PIET25ADxxx format & 8 Sections (A to H) & Current Year (I st, II nd, III rd, IV th)
 const sampleStudents = [
   {
-    reg_no: 'PIET25AD012',
-    name: 'Aarav Singhania',
+    reg_no: 'PIET25AD999',
+    name: 'Demo Student',
     department: 'AI&DS',
     section: 'A',
     current_year: 'II nd Year',
-    email: '2025pietad012@poornima.org'
+    email: '2025pietad999@poornima.org'
   },
   {
     reg_no: 'PIET25AD045',
@@ -149,9 +149,9 @@ function createSampleCertImage(title, studentName, org, category) {
 
 // 3. Sample Certificates
 const sampleCertificates = [
-  // Aarav Singhania (PIET25AD012, AI&DS, A, II nd Year)
+  // Demo Student (PIET25AD999, AI&DS, A, II nd Year)
   {
-    student_reg_no: 'PIET25AD012',
+    student_reg_no: 'PIET25AD999',
     category: 'within',
     title: 'PIET AURA 2024 - AI Hackathon Winner',
     org: 'PIET Department of AI&DS',
@@ -160,7 +160,7 @@ const sampleCertificates = [
     filename: 'PIET_AURA_AI_Hackathon_1st.svg'
   },
   {
-    student_reg_no: 'PIET25AD012',
+    student_reg_no: 'PIET25AD999',
     category: 'within',
     title: 'Machine Learning & MLOps Workshop',
     org: 'PIET ACM Student Chapter',
@@ -169,7 +169,7 @@ const sampleCertificates = [
     filename: 'ML_MLOps_HandsOn_Workshop.svg'
   },
   {
-    student_reg_no: 'PIET25AD012',
+    student_reg_no: 'PIET25AD999',
     category: 'outside',
     title: 'Smart India Hackathon (SIH) 2024 Finalist',
     org: 'Ministry of Education & AICTE',
@@ -178,7 +178,7 @@ const sampleCertificates = [
     filename: 'SIH_2024_National_Finalist.svg'
   },
   {
-    student_reg_no: 'PIET25AD012',
+    student_reg_no: 'PIET25AD999',
     category: 'outside',
     title: 'NPTEL Elite + Silver in Deep Learning',
     org: 'IIT Madras / NPTEL',
@@ -278,6 +278,10 @@ const sampleCertificates = [
     filename: 'Smart_Campus_Idea_Competition.svg'
   }
 ];
+
+// Explicitly remove any legacy student record for 2025pietad012
+db.prepare("DELETE FROM certificates WHERE student_reg_no = 'PIET25AD012'").run();
+db.prepare("DELETE FROM students WHERE reg_no = 'PIET25AD012' OR LOWER(email) = '2025pietad012@poornima.org'").run();
 
 // Insert Students
 const now = new Date().toISOString();
