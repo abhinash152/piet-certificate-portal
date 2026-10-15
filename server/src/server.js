@@ -36,15 +36,15 @@ app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 // Static file serving for uploads (enables direct preview & download of certificates)
 app.use('/uploads', express.static(uploadsDir));
 
-// Root route: Redirect or welcome page to guide to frontend
 app.get('/', (req, res) => {
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
   res.send(`
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>PIET Certificate Portal</title>
-  <meta http-equiv="refresh" content="2; url=http://localhost:5173" />
+  <meta http-equiv="refresh" content="2; url=${frontendUrl}" />
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; background: #0f172a; color: white; margin: 0; padding: 1rem; }
     .card { background: rgba(30, 41, 59, 0.9); padding: 2.5rem; border-radius: 1.5rem; text-align: center; border: 1px solid rgba(255, 255, 255, 0.1); max-width: 520px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
@@ -59,8 +59,8 @@ app.get('/', (req, res) => {
   <div class="card">
     <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎓</div>
     <h1>PIET Certificate Portal API</h1>
-    <p>Poornima Institute of Engineering & Technology backend server is online on port 5000.<br/>Redirecting you to the Web Application...</p>
-    <a href="http://localhost:5173" class="btn">
+    <p>Poornima Institute of Engineering & Technology backend server is online.<br/>Redirecting you to the Web Application...</p>
+    <a href="${frontendUrl}" class="btn">
       <span>Open PIET Web Application</span>
       <span>→</span>
     </a>
