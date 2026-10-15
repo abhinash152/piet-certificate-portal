@@ -231,4 +231,29 @@ router.get('/student/:regNo', (req, res) => {
   }
 });
 
+/**
+ * GET /api/certificates/download/:id
+ * Direct download of a certificate file with proper Content-Disposition header
+ */
+router.get('/download/:id', (req, res) => {
+  try {
+    const certId = req.params.id;
+    const cert = db.prepare('SELECT * FROM certificates WHERE id = ?').get(certId);
+
+    if (!cert) {
+      return res.status(404).json({ success: false, message: 'Certificate not found.' });
+    }
+
+    const absolutePath = path.resolve(__dirname, '../../', cert.file_path);
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ success: false, message: 'Certificate file not found on server disk.' });
+    }
+
+    // Direct download with original filename
+    return res.download(absolutePath, cert.original_filename);
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 export default router;

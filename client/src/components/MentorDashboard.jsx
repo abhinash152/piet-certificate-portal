@@ -25,7 +25,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { COLLEGE_CONFIG } from '../config/collegeConfig';
 import { CertificateViewerModal } from './CertificateViewerModal';
-import { getFileUrl } from '../utils/urlUtils';
+import { getFileUrl, getCertificateDownloadUrl, downloadCertificateFile } from '../utils/urlUtils';
 import axios from 'axios';
 
 export function MentorDashboard({ addToast }) {
@@ -166,16 +166,24 @@ export function MentorDashboard({ addToast }) {
 
   // Export CSV
   const handleExportCsv = () => {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
     const params = new URLSearchParams();
     if (selectedDept !== 'ALL') params.append('department', selectedDept);
     if (selectedSection !== 'ALL') params.append('section', selectedSection);
 
-    const url = `/api/mentor/export-csv?${params.toString()}`;
-    // Trigger download with auth header via fetch or link
+    const url = `${baseUrl}/api/mentor/export-csv?${params.toString()}`;
+    addToast('Generating CSV report...', 'info');
+
     fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then((res) => res.blob())
+      .then(async (res) => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || 'Failed to export CSV.');
+        }
+        return res.blob();
+      })
       .then((blob) => {
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -184,21 +192,37 @@ export function MentorDashboard({ addToast }) {
         document.body.appendChild(a);
         a.click();
         a.remove();
+        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 10000);
         addToast('CSV Internal Marks Summary downloaded!', 'success');
       })
-      .catch(() => addToast('Failed to export CSV.', 'error'));
+      .catch((err) => addToast(err.message || 'Failed to export CSV.', 'error'));
   };
 
   // Download Student ZIP
   const handleDownloadStudentZip = (regNo) => {
-    fetch(`/api/mentor/download/student/${regNo}`, {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const url = `${baseUrl}/api/mentor/download/student/${regNo}`;
+
+    addToast(`Preparing certificate ZIP for ${regNo}...`, 'info');
+
+    fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then((res) => {
-        if (!res.ok) throw new Error('Download failed');
+      .then(async (res) => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || 'Download failed. No certificates or server error.');
+        }
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) {
+          throw new Error('Server returned invalid archive. Please check server connection.');
+        }
         return res.blob();
       })
       .then((blob) => {
+        if (blob.size < 100) {
+          throw new Error('Downloaded archive is empty or invalid.');
+        }
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
@@ -206,9 +230,10 @@ export function MentorDashboard({ addToast }) {
         document.body.appendChild(a);
         a.click();
         a.remove();
-        addToast(`Downloaded certificate archive for ${regNo}`, 'success');
+        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 10000);
+        addToast(`Downloaded certificate archive for ${regNo}!`, 'success');
       })
-      .catch(() => addToast('No files to download or failed to generate ZIP.', 'error'));
+      .catch((err) => addToast(err.message || 'No files to download or failed to generate ZIP.', 'error'));
   };
 
   // Download Section ZIP
@@ -218,15 +243,29 @@ export function MentorDashboard({ addToast }) {
       return;
     }
 
-    const url = `/api/mentor/download/section?department=${selectedDept}&section=${selectedSection}`;
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const url = `${baseUrl}/api/mentor/download/section?department=${selectedDept}&section=${selectedSection}`;
+
+    addToast(`Generating batch archive for ${selectedDept} Sec ${selectedSection}...`, 'info');
+
     fetch(url, {
       headers: { Authorization: `Bearer ${token}` }
     })
-      .then((res) => {
-        if (!res.ok) throw new Error('Download failed');
+      .then(async (res) => {
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.message || 'Download failed for this section.');
+        }
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('text/html')) {
+          throw new Error('Server returned invalid archive. Please check server connection.');
+        }
         return res.blob();
       })
       .then((blob) => {
+        if (blob.size < 100) {
+          throw new Error('Section archive is empty or invalid.');
+        }
         const downloadUrl = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = downloadUrl;
@@ -234,9 +273,10 @@ export function MentorDashboard({ addToast }) {
         document.body.appendChild(a);
         a.click();
         a.remove();
-        addToast(`Downloaded batch archive for ${selectedDept} Section ${selectedSection}`, 'success');
+        setTimeout(() => window.URL.revokeObjectURL(downloadUrl), 10000);
+        addToast(`Downloaded batch archive for ${selectedDept} Section ${selectedSection}!`, 'success');
       })
-      .catch(() => addToast('Failed to generate Section ZIP.', 'error'));
+      .catch((err) => addToast(err.message || 'Failed to generate Section ZIP.', 'error'));
   };
 
   return (
@@ -827,7 +867,7 @@ export function MentorDashboard({ addToast }) {
                       </button>
 
                       <a
-                        href={fileUrl}
+                        href={getCertificateDownloadUrl(cert.id) || fileUrl}
                         download={cert.original_filename}
                         target="_blank"
                         rel="noreferrer"

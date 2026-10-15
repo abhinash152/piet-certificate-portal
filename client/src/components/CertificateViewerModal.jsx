@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Download, Trash2, Flag, CheckCircle, FileText, Calendar, User, Tag, AlertTriangle, ExternalLink } from 'lucide-react';
-import { getFileUrl } from '../utils/urlUtils';
+import { getFileUrl, getCertificateDownloadUrl } from '../utils/urlUtils';
 import axios from 'axios';
 
 export function CertificateViewerModal({ certificate, student, token, onClose, onRefresh, addToast, readOnly = false }) {
@@ -132,8 +132,10 @@ export function CertificateViewerModal({ certificate, student, token, onClose, o
                     Document preview not directly embeddable.
                   </p>
                   <a
-                    href={fileUrl}
+                    href={getCertificateDownloadUrl(certificate.id) || fileUrl}
                     download={certificate.original_filename}
+                    target="_blank"
+                    rel="noreferrer"
                     className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-piet-600 text-white text-xs font-semibold shadow hover:bg-piet-700"
                   >
                     <Download className="w-4 h-4" />
@@ -273,7 +275,7 @@ export function CertificateViewerModal({ certificate, student, token, onClose, o
               {/* Action Buttons Row */}
               <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2">
                 <a
-                  href={fileUrl}
+                  href={getCertificateDownloadUrl(certificate.id) || fileUrl}
                   download={certificate.original_filename}
                   target="_blank"
                   rel="noreferrer"
