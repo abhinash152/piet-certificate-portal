@@ -1,0 +1,25 @@
+{
+  "name": "piet-certificate-portal-server",
+  "version": "1.0.0",
+  "description": "Backend API for PIET Certificate Portal",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "build": "node src/db/seed.js",
+    "start": "node src/server.js",
+    "seed": "node src/db/seed.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "bcryptjs": "^3.0.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.1"
+  }
+}
