@@ -174,6 +174,86 @@ router.post('/login', (req, res) => {
 });
 
 /**
+ * POST /api/mentor/google-auth
+ * Faculty mentor sign-in or sign-up via Google using College Gmail ID (@poornima.org)
+ */
+router.post('/google-auth', (req, res) => {
+  try {
+    const { email, name, department } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Google account email is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Verify official College Gmail ID
+    if (!isCollegeGmail(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Access restricted: Please select your official College Gmail ID (@poornima.org) to continue.'
+      });
+    }
+
+    // Check if mentor already exists
+    let mentor = db.prepare(
+      'SELECT id, username, email, full_name, department, role FROM mentors WHERE LOWER(email) = ?'
+    ).get(cleanEmail);
+
+    if (mentor) {
+      const token = jwt.sign(
+        { id: mentor.id, username: mentor.username, role: mentor.role },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      return res.json({
+        success: true,
+        message: `Welcome back, ${mentor.full_name}!`,
+        token,
+        mentor
+      });
+    }
+
+    // First-time Mentor Sign-Up with Google
+    const cleanName = name ? name.trim() : cleanEmail.split('@')[0];
+    const cleanUsername = cleanEmail.split('@')[0].toLowerCase();
+    const cleanDept = (department && department.trim()) || 'All Departments';
+    const mentorId = crypto.randomUUID();
+    const dummyPasswordHash = bcrypt.hashSync(crypto.randomUUID(), 10);
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO mentors (id, username, email, password_hash, full_name, department, role, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'mentor', ?)
+    `).run(mentorId, cleanUsername, cleanEmail, dummyPasswordHash, cleanName, cleanDept, now);
+
+    const token = jwt.sign(
+      { id: mentorId, username: cleanUsername, role: 'mentor' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: `Mentor account created! Welcome, ${cleanName}.`,
+      token,
+      mentor: {
+        id: mentorId,
+        username: cleanUsername,
+        email: cleanEmail,
+        full_name: cleanName,
+        department: cleanDept,
+        role: 'mentor'
+      }
+    });
+  } catch (error) {
+    console.error('Mentor Google Auth error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
  * GET /api/mentor/me
  * Profile of currently authenticated mentor
  */

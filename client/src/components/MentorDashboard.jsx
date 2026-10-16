@@ -81,6 +81,9 @@ export function MentorDashboard({ addToast }) {
     role: 'faculty_mentor'
   });
 
+  // Mobile Filters Toggle
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
   const fetchDatabaseTables = async () => {
     setDbLoading(true);
     setDbModalOpen(true);
@@ -526,13 +529,23 @@ export function MentorDashboard({ addToast }) {
       </div>
 
       {/* FILTER & SEARCH BAR */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 sm:p-6 shadow-md space-y-4">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl p-4 sm:p-6 shadow-md space-y-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-piet-500" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
-              Filter Student Assessment Records
-            </h3>
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-piet-500" />
+              <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200">
+                Filter Student Records
+              </h3>
+            </div>
+            {/* Mobile Filter Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowMobileFilters(!showMobileFilters)}
+              className="sm:hidden px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+            >
+              {showMobileFilters ? 'Hide Filters' : 'Show Filters'}
+            </button>
           </div>
           <button
             onClick={handleResetFilters}
@@ -543,7 +556,7 @@ export function MentorDashboard({ addToast }) {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 ${showMobileFilters ? 'grid' : 'hidden sm:grid'}`}>
           {/* Search Box */}
           <div className="lg:col-span-2 relative">
             <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />

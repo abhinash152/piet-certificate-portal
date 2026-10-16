@@ -388,7 +388,7 @@ export function StudentDashboard({ onStartUpload, addToast }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         {/* BOX 1: ACADEMIC CERTIFICATES BOX */}
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-blue-200 dark:border-blue-900/50 rounded-3xl p-6 sm:p-7 shadow-xl shadow-blue-500/5 flex flex-col justify-between space-y-5">
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-blue-200 dark:border-blue-900/50 rounded-3xl p-4 sm:p-7 shadow-xl shadow-blue-500/5 flex flex-col justify-between space-y-5">
           <div className="space-y-4">
             {/* Box Header */}
             <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
@@ -549,7 +549,7 @@ export function StudentDashboard({ onStartUpload, addToast }) {
         </div>
 
         {/* BOX 2: NON-ACADEMIC CERTIFICATES BOX */}
-        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-purple-200 dark:border-purple-900/50 rounded-3xl p-6 sm:p-7 shadow-xl shadow-purple-500/5 flex flex-col justify-between space-y-5">
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-purple-200 dark:border-purple-900/50 rounded-3xl p-4 sm:p-7 shadow-xl shadow-purple-500/5 flex flex-col justify-between space-y-5">
           <div className="space-y-4">
             {/* Box Header */}
             <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">

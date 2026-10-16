@@ -102,6 +102,26 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const mentorGoogleAuth = async (googlePayload) => {
+    try {
+      const res = await axios.post('/api/mentor/google-auth', googlePayload);
+      if (res.data.success) {
+        const { token: newToken, mentor: mentorData } = res.data;
+        setToken(newToken);
+        setMentor(mentorData);
+        localStorage.setItem('piet_mentor_token', newToken);
+        localStorage.setItem('piet_mentor_user', JSON.stringify(mentorData));
+        return { success: true, message: res.data.message };
+      }
+      return { success: false, message: res.data.message };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Mentor Google authentication failed.'
+      };
+    }
+  };
+
   const logoutMentor = () => {
     setToken(null);
     setMentor(null);
@@ -151,6 +171,32 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const studentGoogleAuth = async (googlePayload) => {
+    try {
+      const res = await axios.post('/api/students/google-auth', googlePayload);
+      if (res.data.success) {
+        const { token: newStudentToken, student: studentData } = res.data;
+        setStudentToken(newStudentToken);
+        setStudent(studentData);
+        localStorage.setItem('piet_student_token', newStudentToken);
+        localStorage.setItem('piet_student_user', JSON.stringify(studentData));
+        return { success: true, message: res.data.message };
+      }
+      return { 
+        success: false, 
+        message: res.data.message, 
+        needsProfileCompletion: res.data.needsProfileCompletion,
+        email: res.data.email,
+        name: res.data.name
+      };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Student Google authentication failed.'
+      };
+    }
+  };
+
   const studentLogout = () => {
     setStudentToken(null);
     setStudent(null);
@@ -166,6 +212,7 @@ export function AuthProvider({ children }) {
         token,
         login,
         mentorRegister,
+        mentorGoogleAuth,
         logout: logoutMentor,
         isAuthenticated: !!token,
 
@@ -175,6 +222,7 @@ export function AuthProvider({ children }) {
         studentToken,
         studentLogin,
         studentRegister,
+        studentGoogleAuth,
         studentLogout,
         isStudentAuthenticated: !!studentToken,
 

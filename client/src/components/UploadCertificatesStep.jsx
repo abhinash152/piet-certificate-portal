@@ -221,7 +221,7 @@ export function UploadCertificatesStep({
       </div>
 
       {/* SECTION 1: Academic Certificates */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-blue-200/80 dark:border-blue-900/40 rounded-3xl p-6 sm:p-8 shadow-xl shadow-blue-500/5 space-y-4">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-blue-200/80 dark:border-blue-900/40 rounded-3xl p-4 sm:p-8 shadow-xl shadow-blue-500/5 space-y-4">
         {/* Section Heading */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -281,7 +281,7 @@ export function UploadCertificatesStep({
       </div>
 
       {/* SECTION 2: Non-Academic Certificates */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-purple-200/80 dark:border-purple-900/40 rounded-3xl p-6 sm:p-8 shadow-xl shadow-purple-500/5 space-y-4">
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-purple-200/80 dark:border-purple-900/40 rounded-3xl p-4 sm:p-8 shadow-xl shadow-purple-500/5 space-y-4">
         {/* Section Heading */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">

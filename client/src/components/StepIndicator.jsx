@@ -38,10 +38,10 @@ export function StepIndicator({ currentStep }) {
               <motion.div
                 initial={false}
                 animate={{
-                  scale: isActive ? 1.08 : 1,
-                  boxShadow: isActive ? '0 0 0 6px rgba(47, 123, 255, 0.2)' : 'none'
+                  scale: isActive ? 1.06 : 1,
+                  boxShadow: isActive ? '0 0 0 4px rgba(47, 123, 255, 0.2)' : 'none'
                 }}
-                className={`w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-sm transition-colors duration-300 border-2 ${
+                className={`w-9 h-9 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center font-bold text-xs sm:text-sm transition-colors duration-300 border-2 ${
                   isCompleted
                     ? 'bg-emerald-600 border-emerald-600 text-white shadow-md shadow-emerald-500/20'
                     : isActive
@@ -50,9 +50,9 @@ export function StepIndicator({ currentStep }) {
                 }`}
               >
                 {isCompleted ? (
-                  <Check className="w-6 h-6 stroke-[3]" />
+                  <Check className="w-4 h-4 sm:w-6 sm:h-6 stroke-[3]" />
                 ) : (
-                  <StepIcon className="w-5 h-5" />
+                  <StepIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                 )}
               </motion.div>
 

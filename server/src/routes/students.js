@@ -197,6 +197,138 @@ router.post('/login', (req, res) => {
 });
 
 /**
+ * POST /api/students/google-auth
+ * Sign in or sign up via Google using official College Gmail ID (@poornima.org)
+ */
+router.post('/google-auth', (req, res) => {
+  try {
+    const { email, name, regNo, department, section, currentYear, passingYear } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Google account email is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Verify official College Gmail ID
+    if (!isCollegeGmail(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Access restricted: Please select your official College Gmail ID (@poornima.org) to continue.'
+      });
+    }
+
+    // Check if student already exists in DB
+    let student = db.prepare(`
+      SELECT reg_no, name, department, section, current_year, passing_year, email, password_hash
+      FROM students
+      WHERE LOWER(email) = ?
+    `).get(cleanEmail);
+
+    if (student) {
+      // Existing student: generate token and log in immediately
+      const token = jwt.sign(
+        { regNo: student.reg_no, role: 'student', email: student.email },
+        JWT_SECRET,
+        { expiresIn: '30d' }
+      );
+
+      return res.json({
+        success: true,
+        message: `Welcome back, ${student.name}!`,
+        token,
+        student: {
+          reg_no: student.reg_no,
+          name: student.name,
+          department: student.department,
+          section: student.section,
+          current_year: student.current_year || 'I st Year',
+          passing_year: student.passing_year || '2028',
+          email: student.email
+        }
+      });
+    }
+
+    // Student doesn't exist yet: Profile registration via Google
+    let derivedRegNo = regNo ? sanitizePathComponent(regNo.trim().toUpperCase()) : '';
+    let derivedDept = department ? sanitizePathComponent(department) : 'AI&DS';
+    let derivedSection = section ? sanitizePathComponent(section.toUpperCase()) : 'A';
+    let derivedYear = currentYear || 'I st Year';
+    let derivedPassingYear = passingYear || '2028';
+    let cleanName = name ? name.trim() : cleanEmail.split('@')[0];
+
+    // If regNo was not passed, try to extract it from email prefix if it matches student reg format
+    if (!derivedRegNo) {
+      const emailPrefix = cleanEmail.split('@')[0].toUpperCase();
+      if (/^[A-Z0-9]{6,16}$/.test(emailPrefix)) {
+        derivedRegNo = emailPrefix;
+      }
+    }
+
+    // If still no regNo, signal the frontend to ask for Reg No & Dept completion
+    if (!derivedRegNo) {
+      return res.json({
+        success: false,
+        needsProfileCompletion: true,
+        email: cleanEmail,
+        name: cleanName,
+        message: 'Please provide your Registration Number and Department to complete signup.'
+      });
+    }
+
+    // Check if regNo already exists
+    const existingReg = db.prepare('SELECT reg_no FROM students WHERE reg_no = ?').get(derivedRegNo);
+    if (existingReg) {
+      db.prepare('UPDATE students SET email = ? WHERE reg_no = ?').run(cleanEmail, derivedRegNo);
+      student = db.prepare('SELECT reg_no, name, department, section, current_year, passing_year, email FROM students WHERE reg_no = ?').get(derivedRegNo);
+    } else {
+      const dummyPasswordHash = bcrypt.hashSync(crypto.randomUUID(), 10);
+      const now = new Date().toISOString();
+      db.prepare(`
+        INSERT INTO students (reg_no, name, department, section, current_year, passing_year, email, password_hash, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        derivedRegNo,
+        cleanName,
+        derivedDept,
+        derivedSection,
+        derivedYear,
+        derivedPassingYear,
+        cleanEmail,
+        dummyPasswordHash,
+        now
+      );
+
+      student = {
+        reg_no: derivedRegNo,
+        name: cleanName,
+        department: derivedDept,
+        section: derivedSection,
+        current_year: derivedYear,
+        passing_year: derivedPassingYear,
+        email: cleanEmail
+      };
+    }
+
+    const token = jwt.sign(
+      { regNo: student.reg_no, role: 'student', email: student.email },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: `Account created! Welcome to PIET, ${student.name}.`,
+      token,
+      student
+    });
+  } catch (error) {
+    console.error('Student Google Auth error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
  * GET /api/students/me
  * Authenticated student profile, statistics, and certificate dossier
  */
