@@ -69,41 +69,25 @@ export function GoogleSignInModal({ isOpen, onClose, role = 'student', onSelectA
     passingYear: '2028'
   });
 
-  // Stored accounts
+  // Stored accounts in localStorage (no dummy accounts)
   const [accounts, setAccounts] = useState(() => {
     try {
       const saved = localStorage.getItem('piet_google_accounts_list');
       if (saved) return JSON.parse(saved);
     } catch {}
-    return role === 'mentor'
-      ? [
-          {
-            name: 'Faculty Mentor',
-            email: 'mentor@piet.poornima.org',
-            initial: 'M',
-            bg: 'bg-[#5c6bc0]'
-          }
-        ]
-      : [
-          {
-            name: 'College Student',
-            email: '2025pietad045@poornima.org',
-            initial: 'C',
-            bg: 'bg-[#78909c]'
-          }
-        ];
+    return [];
   });
 
   useEffect(() => {
     if (isOpen) {
       setError('');
       setLoading(false);
-      setViewState('chooser');
+      setViewState(accounts.length > 0 ? 'chooser' : 'signin');
       setIsRemovingAccounts(false);
       setEmailInput('');
       setNameInput('');
     }
-  }, [isOpen]);
+  }, [isOpen, accounts.length]);
 
   if (!isOpen) return null;
 

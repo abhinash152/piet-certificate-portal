@@ -5,7 +5,7 @@
   "main": "src/server.js",
   "type": "module",
   "scripts": {
-    "build": "node src/db/seed.js",
+    "build": "echo 'Build complete'",
     "start": "node src/server.js",
     "seed": "node src/db/seed.js",
     "dev": "node --watch src/server.js"
