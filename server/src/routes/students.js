@@ -13,6 +13,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const JWT_SECRET = process.env.JWT_SECRET || 'piet_portal_super_secure_jwt_secret_key_2025';
 
+// Helper to validate official College Gmail domain
+const isCollegeGmail = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  const clean = email.trim().toLowerCase();
+  return clean.endsWith('@poornima.org') || clean.endsWith('.poornima.org');
+};
+
 /**
  * POST /api/students/register
  * Student sign-up with College Email ID, Password, and Academic details
@@ -28,6 +35,16 @@ router.post('/register', (req, res) => {
       });
     }
 
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Enforce official College Gmail ID restriction
+    if (!isCollegeGmail(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration restricted: Only official College Gmail IDs (@poornima.org) are permitted.'
+      });
+    }
+
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
@@ -35,7 +52,6 @@ router.post('/register', (req, res) => {
       });
     }
 
-    const cleanEmail = email.trim().toLowerCase();
     const cleanRegNo = sanitizePathComponent(regNo.trim().toUpperCase());
     const cleanName = name?.trim() || `Student ${cleanRegNo}`;
     const cleanDept = sanitizePathComponent(department);
@@ -107,22 +123,30 @@ router.post('/register', (req, res) => {
  */
 router.post('/login', (req, res) => {
   try {
-    const { identifier, password } = req.body; // identifier can be college email or regNo
+    const { identifier, password } = req.body; // must be college email
 
     if (!identifier || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Please enter your College Email ID and Password.'
+        message: 'Please enter your College Gmail ID and Password.'
       });
     }
 
     const cleanId = identifier.trim().toLowerCase();
 
+    // Restrict student login to official College Gmail ID only
+    if (!isCollegeGmail(cleanId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Login restricted: Please log in using your official College Gmail ID (@poornima.org).'
+      });
+    }
+
     const student = db.prepare(`
       SELECT reg_no, name, department, section, current_year, passing_year, email, password_hash
       FROM students
-      WHERE LOWER(email) = ? OR LOWER(reg_no) = ?
-    `).get(cleanId, cleanId);
+      WHERE LOWER(email) = ?
+    `).get(cleanId);
 
     if (!student) {
       return res.status(404).json({

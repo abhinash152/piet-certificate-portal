@@ -18,24 +18,130 @@ const uploadsBaseDir = process.env.UPLOADS_DIR ? path.resolve(process.env.UPLOAD
 
 const JWT_SECRET = process.env.JWT_SECRET || 'piet_portal_super_secure_jwt_secret_key_2025';
 
+// Helper to validate official College Gmail domain
+const isCollegeGmail = (email) => {
+  if (!email || typeof email !== 'string') return false;
+  const clean = email.trim().toLowerCase();
+  return clean.endsWith('@poornima.org') || clean.endsWith('.poornima.org');
+};
+
+/**
+ * POST /api/mentor/register
+ * Allows faculty mentors to sign up using their official college Gmail ID only
+ */
+router.post('/register', (req, res) => {
+  try {
+    const email = req.body.email;
+    const password = req.body.password;
+    const fullName = req.body.fullName || req.body.name;
+    const username = req.body.username;
+    const department = req.body.department;
+
+    if (!email || !password || !fullName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide your Full Name, College Gmail ID, and Password.'
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Restrict signup to official College Gmail ID only
+    if (!isCollegeGmail(cleanEmail)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Registration restricted: Only official College Gmail IDs (@poornima.org) are permitted.'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long to secure your account.'
+      });
+    }
+
+    const cleanName = fullName.trim();
+    const cleanUsername = username ? username.trim().toLowerCase() : cleanEmail.split('@')[0];
+    const cleanDept = (department && department.trim()) || 'All Departments';
+
+    // Check if mentor with email or username already exists
+    const existing = db.prepare(
+      'SELECT id, username, email FROM mentors WHERE LOWER(email) = ? OR LOWER(username) = ?'
+    ).get(cleanEmail, cleanUsername);
+
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'An account already exists for this College Gmail ID. Please sign in instead.'
+      });
+    }
+
+    const mentorId = crypto.randomUUID();
+    const passwordHash = bcrypt.hashSync(password, 10);
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO mentors (id, username, email, password_hash, full_name, department, role, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, 'mentor', ?)
+    `).run(mentorId, cleanUsername, cleanEmail, passwordHash, cleanName, cleanDept, now);
+
+    const token = jwt.sign(
+      { id: mentorId, username: cleanUsername, role: 'mentor' },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: 'Mentor account created successfully!',
+      token,
+      mentor: {
+        id: mentorId,
+        username: cleanUsername,
+        email: cleanEmail,
+        full_name: cleanName,
+        department: cleanDept,
+        role: 'mentor'
+      }
+    });
+  } catch (error) {
+    console.error('Mentor registration error:', error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 /**
  * POST /api/mentor/login
- * Authenticates mentor and returns JWT
+ * Authenticates mentor using College Gmail ID and password
  */
 router.post('/login', (req, res) => {
   try {
-    const { identifier, password } = req.body; // identifier can be email or username
+    const { identifier, password } = req.body; // college Gmail ID or username
 
     if (!identifier || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide both email/username and password.' });
+      return res.status(400).json({ success: false, message: 'Please provide both your College Gmail ID and password.' });
+    }
+
+    const cleanId = identifier.trim().toLowerCase();
+
+    // Enforce College Gmail ID
+    if (!isCollegeGmail(cleanId) && cleanId !== 'pietmentor' && cleanId !== 'mentor') {
+      return res.status(400).json({
+        success: false,
+        message: 'Login restricted: Please log in using your official College Gmail ID (@poornima.org).'
+      });
     }
 
     const mentor = db.prepare(
-      'SELECT * FROM mentors WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)'
-    ).get(identifier.trim(), identifier.trim());
+      'SELECT * FROM mentors WHERE LOWER(email) = ? OR LOWER(username) = ?'
+    ).get(cleanId, cleanId);
 
     if (!mentor) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials. Please verify your email/username.' });
+      return res.status(401).json({
+        success: false,
+        message: 'No mentor account found with this College Gmail ID. Please sign up first.'
+      });
     }
 
     const isMatch = bcrypt.compareSync(password, mentor.password_hash);

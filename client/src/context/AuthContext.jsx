@@ -82,6 +82,26 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const mentorRegister = async (mentorPayload) => {
+    try {
+      const res = await axios.post('/api/mentor/register', mentorPayload);
+      if (res.data.success) {
+        const { token: newToken, mentor: mentorData } = res.data;
+        setToken(newToken);
+        setMentor(mentorData);
+        localStorage.setItem('piet_mentor_token', newToken);
+        localStorage.setItem('piet_mentor_user', JSON.stringify(mentorData));
+        return { success: true, message: res.data.message };
+      }
+      return { success: false, message: res.data.message };
+    } catch (err) {
+      return {
+        success: false,
+        message: err.response?.data?.message || 'Mentor registration failed.'
+      };
+    }
+  };
+
   const logoutMentor = () => {
     setToken(null);
     setMentor(null);
@@ -145,6 +165,7 @@ export function AuthProvider({ children }) {
         mentor,
         token,
         login,
+        mentorRegister,
         logout: logoutMentor,
         isAuthenticated: !!token,
 

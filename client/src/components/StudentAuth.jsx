@@ -31,7 +31,12 @@ export function StudentAuth({ onAuthenticated, addToast }) {
 
     if (mode === 'login') {
       if (!email.trim() || !password) {
-        setError('Please enter both your College Email ID and Password.');
+        setError('Please enter both your College Gmail ID and Password.');
+        return;
+      }
+
+      if (!COLLEGE_CONFIG.emailValidation.isCollegeEmail(email.trim())) {
+        setError('Only official college Gmail IDs (@poornima.org) are permitted to sign in.');
         return;
       }
 
@@ -50,6 +55,11 @@ export function StudentAuth({ onAuthenticated, addToast }) {
       // Registration validation
       if (!email.trim() || !password || !regNo.trim() || !name.trim()) {
         setError('Please fill in all required fields.');
+        return;
+      }
+
+      if (!COLLEGE_CONFIG.emailValidation.isCollegeEmail(email.trim())) {
+        setError('Registration restricted: You must register with an official College Gmail ID (@poornima.org).');
         return;
       }
 

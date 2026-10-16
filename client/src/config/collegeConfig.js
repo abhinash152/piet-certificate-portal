@@ -63,6 +63,19 @@ export const COLLEGE_CONFIG = {
     ]
   },
 
+  // College Gmail ID formatting & validation rules
+  emailValidation: {
+    domain: "@poornima.org",
+    allowedDomains: ["@poornima.org", "@piet.poornima.org"],
+    placeholder: "yourname@poornima.org",
+    errorMessage: "Only official college Gmail IDs (@poornima.org) are permitted to sign up or log in.",
+    isCollegeEmail: (email) => {
+      if (!email || typeof email !== 'string') return false;
+      const clean = email.trim().toLowerCase();
+      return clean.endsWith("@poornima.org") || clean.endsWith(".poornima.org");
+    }
+  },
+
   // Registration Number formatting & validation rules
   // Example format requested: PIET25ADxxx (e.g., PIET25AD999, PIET25CS045)
   regNo: {
