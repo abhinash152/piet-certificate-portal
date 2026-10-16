@@ -11,6 +11,7 @@ import { StudentDashboard } from './components/StudentDashboard';
 import { MentorLogin } from './components/MentorLogin';
 import { MentorDashboard } from './components/MentorDashboard';
 import { Toast } from './components/Toast';
+import { GoogleSignInModal } from './components/GoogleSignInModal';
 import { useAuth } from './context/AuthContext';
 import { ShieldCheck, UploadCloud, Sparkles } from 'lucide-react';
 
@@ -18,7 +19,9 @@ export default function App() {
   const { 
     isAuthenticated: isMentorAuth, 
     student, 
-    isStudentAuthenticated 
+    isStudentAuthenticated,
+    studentGoogleAuth,
+    mentorGoogleAuth
   } = useAuth();
 
   // Navigation: 'student' or 'mentor'
@@ -127,6 +130,32 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Google Modal State triggered from Header
+  const [headerGoogleModalOpen, setHeaderGoogleModalOpen] = useState(false);
+  const [headerGoogleRole, setHeaderGoogleRole] = useState('student');
+
+  const handleHeaderGoogleSelect = async (payload) => {
+    try {
+      if (headerGoogleRole === 'mentor') {
+        const res = await mentorGoogleAuth(payload);
+        if (res.success) {
+          addToast(res.message || 'Signed in to Mentor Dashboard via Google!', 'success');
+          setCurrentView('mentor');
+        }
+        return res;
+      } else {
+        const res = await studentGoogleAuth(payload);
+        if (res.success) {
+          addToast(res.message || 'Signed in to Student Dashboard via Google!', 'success');
+          setStudentSubView('dashboard');
+        }
+        return res;
+      }
+    } catch (err) {
+      return { success: false, message: err.message };
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-200">
       
@@ -136,6 +165,10 @@ export default function App() {
         setCurrentView={handleSetCurrentView}
         studentSubView={studentSubView}
         setStudentSubView={setStudentSubView}
+        openGoogleSignIn={(role) => {
+          setHeaderGoogleRole(role || (currentView === 'mentor' ? 'mentor' : 'student'));
+          setHeaderGoogleModalOpen(true);
+        }}
       />
 
       {/* Main Content Area */}
@@ -239,6 +272,14 @@ export default function App() {
 
       {/* Global Toast System */}
       <Toast toasts={toasts} removeToast={removeToast} />
+
+      {/* Global Google Account Chooser Modal triggered from Header */}
+      <GoogleSignInModal
+        isOpen={headerGoogleModalOpen}
+        onClose={() => setHeaderGoogleModalOpen(false)}
+        role={headerGoogleRole}
+        onSelectAccount={handleHeaderGoogleSelect}
+      />
 
       {/* Footer */}
       <Footer />

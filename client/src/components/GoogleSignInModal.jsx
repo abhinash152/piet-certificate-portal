@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, AlertCircle, ArrowRight, CheckCircle2, User, Mail, Hash, Building } from 'lucide-react';
+import { X, AlertCircle, ArrowLeft, ArrowRight, MinusCircle, User, UserPlus, Globe } from 'lucide-react';
 import { COLLEGE_CONFIG } from '../config/collegeConfig';
 
-// Official multi-color Google SVG icon
-export function GoogleIcon({ className = "w-5 h-5" }) {
+// Official multi-color Google "G" SVG icon
+export function GoogleIcon({ className = "w-6 h-6" }) {
   return (
     <svg className={className} viewBox="0 0 24 24">
       <path
@@ -27,14 +27,40 @@ export function GoogleIcon({ className = "w-5 h-5" }) {
   );
 }
 
+// Google User Circle Icon for "Use another account"
+function GoogleUserCircleIcon() {
+  return (
+    <div className="w-8 h-8 rounded-full border border-[#747775] dark:border-[#8e918f] flex items-center justify-center text-[#444746] dark:text-[#c4c7c5]">
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      </svg>
+    </div>
+  );
+}
+
+// Google Remove Account Icon for "Remove an account"
+function GoogleRemoveAccountIcon() {
+  return (
+    <div className="w-8 h-8 rounded-full border border-[#747775] dark:border-[#8e918f] flex items-center justify-center text-[#444746] dark:text-[#c4c7c5]">
+      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+      </svg>
+    </div>
+  );
+}
+
 export function GoogleSignInModal({ isOpen, onClose, role = 'student', onSelectAccount }) {
+  // Views: 'chooser' (the exact view in screenshot) | 'signin' | 'complete_profile'
+  const [viewState, setViewState] = useState('chooser');
+  const [isRemovingAccounts, setIsRemovingAccounts] = useState(false);
+
+  // Form Fields for "Use another account"
   const [emailInput, setEmailInput] = useState('');
-  const [fullNameInput, setFullNameInput] = useState('');
+  const [nameInput, setNameInput] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [viewState, setViewState] = useState('select'); // 'select' | 'manual' | 'complete_profile'
 
-  // Profile completion state for new students
+  // Profile completion state for new student
   const [completionData, setCompletionData] = useState({
     regNo: '',
     department: 'AI&DS',
@@ -43,19 +69,28 @@ export function GoogleSignInModal({ isOpen, onClose, role = 'student', onSelectA
     passingYear: '2028'
   });
 
-  // Recent accounts saved in browser
-  const [recentAccounts, setRecentAccounts] = useState(() => {
+  // Stored accounts
+  const [accounts, setAccounts] = useState(() => {
     try {
-      const saved = localStorage.getItem('piet_recent_google_accounts');
+      const saved = localStorage.getItem('piet_google_accounts_list');
       if (saved) return JSON.parse(saved);
     } catch {}
-    // Seed sensible defaults for quick testing
     return role === 'mentor'
       ? [
-          { name: 'PIET Faculty Mentor', email: 'mentor@piet.poornima.org', avatarText: 'FM' }
+          {
+            name: 'Faculty Mentor',
+            email: 'mentor@piet.poornima.org',
+            initial: 'M',
+            bg: 'bg-[#5c6bc0]'
+          }
         ]
       : [
-          { name: 'PIET Student Account', email: '2025pietad045@poornima.org', avatarText: 'PS' }
+          {
+            name: 'College Student',
+            email: '2025pietad045@poornima.org',
+            initial: 'C',
+            bg: 'bg-[#78909c]'
+          }
         ];
   });
 
@@ -63,27 +98,34 @@ export function GoogleSignInModal({ isOpen, onClose, role = 'student', onSelectA
     if (isOpen) {
       setError('');
       setLoading(false);
-      setViewState('select');
+      setViewState('chooser');
+      setIsRemovingAccounts(false);
+      setEmailInput('');
+      setNameInput('');
     }
   }, [isOpen]);
 
   if (!isOpen) return null;
 
-  const saveRecentAccount = (name, email) => {
+  const saveAccountsToStorage = (updated) => {
+    setAccounts(updated);
     try {
-      const avatarText = name ? name.substring(0, 2).toUpperCase() : email.substring(0, 2).toUpperCase();
-      const updated = [{ name, email, avatarText }, ...recentAccounts.filter(a => a.email !== email)].slice(0, 4);
-      setRecentAccounts(updated);
-      localStorage.setItem('piet_recent_google_accounts', JSON.stringify(updated));
+      localStorage.setItem('piet_google_accounts_list', JSON.stringify(updated));
     } catch {}
   };
 
-  const handleAccountChosen = async (account) => {
+  const removeAccount = (e, emailToRemove) => {
+    e.stopPropagation();
+    const updated = accounts.filter(a => a.email !== emailToRemove);
+    saveAccountsToStorage(updated);
+  };
+
+  const handleSelectAccount = async (account) => {
     const cleanEmail = account.email.trim().toLowerCase();
-    
-    // Domain restriction check
+
+    // Check college domain
     if (!COLLEGE_CONFIG.emailValidation.isCollegeEmail(cleanEmail)) {
-      setError('Selected account is not a Poornima Google Workspace ID. Only official @poornima.org IDs are permitted.');
+      setError('Selected account is not a Poornima Google Workspace account. You must sign in using your official @poornima.org ID.');
       return;
     }
 
@@ -96,287 +138,419 @@ export function GoogleSignInModal({ isOpen, onClose, role = 'student', onSelectA
       ...(role === 'student' && viewState === 'complete_profile' ? completionData : {})
     };
 
-    saveRecentAccount(payload.name, cleanEmail);
+    // Add/Update to accounts list
+    const existingIdx = accounts.findIndex(a => a.email === cleanEmail);
+    let updated;
+    if (existingIdx >= 0) {
+      updated = [...accounts];
+      updated[existingIdx] = { ...updated[existingIdx], name: payload.name };
+    } else {
+      updated = [
+        {
+          name: payload.name,
+          email: cleanEmail,
+          initial: (payload.name[0] || cleanEmail[0] || 'P').toUpperCase(),
+          bg: 'bg-[#0288d1]'
+        },
+        ...accounts
+      ];
+    }
+    saveAccountsToStorage(updated);
 
     const result = await onSelectAccount(payload);
     setLoading(false);
 
     if (result && result.needsProfileCompletion) {
       setEmailInput(cleanEmail);
-      setFullNameInput(payload.name);
+      setNameInput(payload.name);
       setViewState('complete_profile');
       setError('');
     } else if (result && !result.success) {
-      setError(result.message || 'Authentication with Google failed.');
+      setError(result.message || 'Google authentication failed.');
     } else {
       onClose();
     }
   };
 
-  const handleManualSubmit = (e) => {
+  const handleManualNext = (e) => {
     e.preventDefault();
     if (!emailInput.trim()) {
-      setError('Please enter your College Gmail ID.');
+      setError('Enter an email address');
       return;
     }
 
     const cleanEmail = emailInput.trim().toLowerCase();
     if (!COLLEGE_CONFIG.emailValidation.isCollegeEmail(cleanEmail)) {
-      setError('Registration restricted: Only official College Gmail IDs (@poornima.org) are permitted.');
+      setError('Couldn\'t find your Poornima Google Account. PIET Portal requires an official @poornima.org college ID.');
       return;
     }
 
-    handleAccountChosen({
+    handleSelectAccount({
       email: cleanEmail,
-      name: fullNameInput.trim() || cleanEmail.split('@')[0]
+      name: nameInput.trim() || cleanEmail.split('@')[0]
     });
   };
 
-  const handleCompleteProfileSubmit = (e) => {
+  const handleCompleteProfile = (e) => {
     e.preventDefault();
     if (!completionData.regNo.trim()) {
-      setError('Please provide your Registration Number.');
+      setError('Please enter your Registration Number.');
       return;
     }
 
-    handleAccountChosen({
+    handleSelectAccount({
       email: emailInput.trim().toLowerCase(),
-      name: fullNameInput.trim() || emailInput.split('@')[0]
+      name: nameInput.trim() || emailInput.split('@')[0]
     });
   };
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/50 backdrop-blur-sm overflow-y-auto font-sans">
         <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 10 }}
+          initial={{ opacity: 0, scale: 0.96, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
+          exit={{ opacity: 0, scale: 0.96, y: 15 }}
           transition={{ duration: 0.2 }}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden"
+          className="bg-white dark:bg-[#1e1f20] border border-[#dadce0] dark:border-[#444746] rounded-[28px] shadow-2xl w-full max-w-2xl overflow-hidden relative my-auto text-[#1f1f1f] dark:text-[#e3e3e3]"
         >
-          {/* Header styled like Google OAuth picker */}
-          <div className="p-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 relative">
-            <button
-              onClick={onClose}
-              className="absolute right-4 top-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+          {/* Close Modal button */}
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="absolute right-4 top-4 p-2 text-[#444746] dark:text-[#c4c7c5] hover:bg-[#f1f3f4] dark:hover:bg-[#2d2f31] rounded-full transition-colors z-10"
+          >
+            <X className="w-5 h-5" />
+          </button>
 
-            <div className="flex items-center gap-2.5 mb-2">
-              <GoogleIcon className="w-6 h-6" />
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
-                Sign in with Google
-              </span>
-            </div>
-
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">
-              {viewState === 'complete_profile'
-                ? 'Complete Student Profile'
-                : 'Choose a College Gmail Account'}
-            </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              to continue to <strong className="text-slate-700 dark:text-slate-300 font-semibold">{COLLEGE_CONFIG.portalName}</strong>
-            </p>
-          </div>
-
-          <div className="p-6 space-y-4">
-            {error && (
-              <div className="p-3.5 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* VIEW 1: SELECT EXISTING OR RECENT COLLEGE ACCOUNT */}
-            {viewState === 'select' && (
-              <div className="space-y-3">
-                <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Select your College Gmail account:
-                </div>
-
-                {recentAccounts.map((acc, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    disabled={loading}
-                    onClick={() => handleAccountChosen(acc)}
-                    className="w-full p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-piet-500 dark:hover:border-piet-500 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 flex items-center gap-3.5 text-left transition-all group cursor-pointer shadow-sm"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-piet-600 to-purpleBrand-600 text-white font-bold flex items-center justify-center text-xs shadow-sm flex-shrink-0">
-                      {acc.avatarText || 'PI'}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate group-hover:text-piet-600 dark:group-hover:text-piet-400 transition-colors">
-                        {acc.name}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono truncate">
-                        {acc.email}
-                      </p>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-piet-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-                  </button>
-                ))}
-
-                {/* Use Another Account Button */}
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => {
-                    setError('');
-                    setViewState('manual');
-                  }}
-                  className="w-full mt-2 p-3.5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 hover:border-piet-500 text-slate-700 dark:text-slate-300 hover:text-piet-600 dark:hover:text-piet-400 flex items-center justify-center gap-2 text-xs font-bold transition-all cursor-pointer"
-                >
-                  <Mail className="w-4 h-4" />
-                  <span>Use another College Gmail account (@poornima.org)</span>
-                </button>
-              </div>
-            )}
-
-            {/* VIEW 2: MANUAL ENTRY OF COLLEGE GMAIL */}
-            {viewState === 'manual' && (
-              <form onSubmit={handleManualSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Your Full Legal Name (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={fullNameInput}
-                    onChange={(e) => setFullNameInput(e.target.value)}
-                    placeholder="e.g., Aarav Sharma"
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-piet-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                    <Mail className="w-3.5 h-3.5 text-piet-500" />
-                    College Gmail ID <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={emailInput}
-                    onChange={(e) => setEmailInput(e.target.value)}
-                    placeholder="e.g., 2025pietad045@poornima.org"
-                    required
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-piet-500 font-mono"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    Must end with @poornima.org or @piet.poornima.org
-                  </span>
-                </div>
-
-                <div className="flex items-center gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError('');
-                      setViewState('select');
-                    }}
-                    className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  >
-                    Back
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="flex-1 py-2.5 rounded-xl bg-piet-600 hover:bg-piet-700 text-white text-xs font-bold transition-all shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-70"
-                  >
-                    {loading ? (
-                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        <span>Continue</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-
-            {/* VIEW 3: PROFILE COMPLETION (FOR NEW STUDENTS) */}
-            {viewState === 'complete_profile' && (
-              <form onSubmit={handleCompleteProfileSubmit} className="space-y-3.5">
-                <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900 text-blue-800 dark:text-blue-300 text-xs">
-                  <p className="font-semibold">New student registration with Google account:</p>
-                  <p className="font-mono mt-0.5">{emailInput}</p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1.5">
-                    <Hash className="w-3.5 h-3.5 text-piet-500" />
-                    Registration Number <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={completionData.regNo}
-                    onChange={(e) => setCompletionData({ ...completionData, regNo: e.target.value.toUpperCase() })}
-                    placeholder="e.g., PIET25AD045"
-                    required
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono uppercase focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Department
-                    </label>
-                    <select
-                      value={completionData.department}
-                      onChange={(e) => setCompletionData({ ...completionData, department: e.target.value })}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
-                    >
-                      {COLLEGE_CONFIG.departments.map(d => (
-                        <option key={d.id} value={d.id}>{d.short}</option>
-                      ))}
-                    </select>
+          {/* VIEW 1: EXACT GOOGLE "CHOOSE AN ACCOUNT" LAYOUT (MATCHING USER SCREENSHOT) */}
+          {viewState === 'chooser' && (
+            <div className="p-6 sm:p-10">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+                
+                {/* Left Column: Google G Logo & "Choose an account" Title */}
+                <div className="md:col-span-5 flex flex-col justify-start">
+                  <div className="mb-4">
+                    <GoogleIcon className="w-10 h-10" />
                   </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                      Section
-                    </label>
-                    <select
-                      value={completionData.section}
-                      onChange={(e) => setCompletionData({ ...completionData, section: e.target.value })}
-                      className="w-full px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
-                    >
-                      {COLLEGE_CONFIG.sections.map(s => (
-                        <option key={s} value={s}>Section {s}</option>
-                      ))}
-                    </select>
+                  <h2 className="text-2xl sm:text-[28px] font-normal tracking-tight text-[#1f1f1f] dark:text-[#e3e3e3] leading-snug">
+                    Choose an account
+                  </h2>
+                  <p className="text-sm text-[#444746] dark:text-[#c4c7c5] mt-2">
+                    to continue to <span className="font-medium text-[#1f1f1f] dark:text-white">Poornima Certificate Portal</span>
+                  </p>
+                  <div className="mt-4 hidden md:block">
+                    <span className="text-[11px] font-medium text-[#0b57d0] dark:text-[#a8c7fa] bg-[#ecf3fe] dark:bg-[#004a77]/30 px-2.5 py-1 rounded-full border border-[#c2e7ff] dark:border-[#004a77]">
+                      @poornima.org verified
+                    </span>
                   </div>
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full mt-2 py-3 rounded-xl bg-gradient-to-r from-piet-600 to-purpleBrand-600 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70"
-                >
-                  {loading ? (
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <span>Complete Signup & Enter Dashboard</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </>
+                {/* Right Column: Account List (Exact match to screenshot) */}
+                <div className="md:col-span-7 flex flex-col justify-center">
+                  
+                  {error && (
+                    <div className="mb-4 p-3 rounded-xl bg-[#fdeded] dark:bg-[#3c1e1e] border border-[#f5c2c7] dark:border-[#842029] text-[#b3261e] dark:text-[#f2b8b5] text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      <span>{error}</span>
+                    </div>
                   )}
-                </button>
-              </form>
-            )}
 
-            {/* Poornima Trust & Privacy footer */}
-            <div className="pt-3 border-t border-slate-100 dark:border-slate-800 text-center">
-              <p className="text-[11px] text-slate-400">
-                Poornima Institute of Engineering & Technology Authentication Gateway
-              </p>
+                  <div className="border-t border-[#dadce0] dark:border-[#444746]">
+                    
+                    {/* Render saved accounts */}
+                    {accounts.map((acc, index) => (
+                      <div
+                        key={index}
+                        onClick={() => !isRemovingAccounts && handleSelectAccount(acc)}
+                        className={`flex items-center justify-between py-3.5 px-3 border-b border-[#dadce0] dark:border-[#444746] transition-colors ${
+                          isRemovingAccounts
+                            ? 'bg-rose-50/40 dark:bg-rose-950/20'
+                            : 'hover:bg-[#f8f9fa] dark:hover:bg-[#282a2c] cursor-pointer'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0">
+                          {/* Circular avatar initial */}
+                          <div className={`w-9 h-9 rounded-full ${acc.bg || 'bg-[#78909c]'} text-white font-medium text-sm flex items-center justify-center flex-shrink-0 shadow-sm`}>
+                            {acc.initial || acc.name?.[0] || 'C'}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium text-[#1f1f1f] dark:text-[#e3e3e3] truncate">
+                              {acc.name}
+                            </p>
+                            <p className="text-xs text-[#444746] dark:text-[#c4c7c5] font-normal truncate">
+                              {acc.email}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Status label: "Signed out" or Remove button */}
+                        {isRemovingAccounts ? (
+                          <button
+                            type="button"
+                            onClick={(e) => removeAccount(e, acc.email)}
+                            className="p-1.5 text-rose-600 hover:text-rose-700 hover:bg-rose-100 rounded-full transition-colors"
+                            title="Remove account from list"
+                          >
+                            <MinusCircle className="w-5 h-5" />
+                          </button>
+                        ) : (
+                          <span className="text-xs text-[#5f6368] dark:text-[#8e918f] font-normal flex-shrink-0 pl-2">
+                            Signed out
+                          </span>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Option: "Use another account" */}
+                    <div
+                      onClick={() => {
+                        setError('');
+                        setViewState('signin');
+                      }}
+                      className="flex items-center gap-3.5 py-3.5 px-3 border-b border-[#dadce0] dark:border-[#444746] hover:bg-[#f8f9fa] dark:hover:bg-[#282a2c] transition-colors cursor-pointer"
+                    >
+                      <GoogleUserCircleIcon />
+                      <span className="text-sm font-medium text-[#1f1f1f] dark:text-[#e3e3e3]">
+                        Use another account
+                      </span>
+                    </div>
+
+                    {/* Option: "Remove an account" */}
+                    <div
+                      onClick={() => {
+                        if (accounts.length > 0) {
+                          setIsRemovingAccounts(!isRemovingAccounts);
+                        }
+                      }}
+                      className="flex items-center gap-3.5 py-3.5 px-3 border-b border-[#dadce0] dark:border-[#444746] hover:bg-[#f8f9fa] dark:hover:bg-[#282a2c] transition-colors cursor-pointer"
+                    >
+                      <GoogleRemoveAccountIcon />
+                      <span className="text-sm font-medium text-[#1f1f1f] dark:text-[#e3e3e3]">
+                        {isRemovingAccounts ? 'Done removing accounts' : 'Remove an account'}
+                      </span>
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 2: GOOGLE "SIGN IN" INPUT VIEW (WHEN "USE ANOTHER ACCOUNT" IS CLICKED) */}
+          {viewState === 'signin' && (
+            <div className="p-6 sm:p-10">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+                
+                {/* Left Column */}
+                <div className="md:col-span-5 flex flex-col justify-start">
+                  <div className="mb-4">
+                    <GoogleIcon className="w-10 h-10" />
+                  </div>
+                  <h2 className="text-2xl sm:text-[28px] font-normal tracking-tight text-[#1f1f1f] dark:text-[#e3e3e3] leading-snug">
+                    Sign in
+                  </h2>
+                  <p className="text-sm text-[#444746] dark:text-[#c4c7c5] mt-2">
+                    with your Google College Account
+                  </p>
+                  <p className="text-xs text-[#0b57d0] dark:text-[#a8c7fa] mt-3 font-medium">
+                    Only @poornima.org email addresses allowed
+                  </p>
+                </div>
+
+                {/* Right Column: Email input field & Next button */}
+                <div className="md:col-span-7 flex flex-col justify-between">
+                  <form onSubmit={handleManualNext} className="space-y-4">
+                    
+                    {error && (
+                      <div className="p-3 rounded-xl bg-[#fdeded] dark:bg-[#3c1e1e] border border-[#f5c2c7] dark:border-[#842029] text-[#b3261e] dark:text-[#f2b8b5] text-xs flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-medium text-[#444746] dark:text-[#c4c7c5] mb-1.5">
+                        Your Full Name (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        value={nameInput}
+                        onChange={(e) => setNameInput(e.target.value)}
+                        placeholder="e.g. Aarav Sharma"
+                        className="w-full px-4 py-3 rounded-lg border border-[#747775] dark:border-[#8e918f] focus:border-[#0b57d0] dark:focus:border-[#a8c7fa] focus:ring-1 focus:ring-[#0b57d0] bg-transparent text-sm outline-none transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-[#444746] dark:text-[#c4c7c5] mb-1.5">
+                        College Gmail ID
+                      </label>
+                      <input
+                        type="email"
+                        value={emailInput}
+                        onChange={(e) => setEmailInput(e.target.value)}
+                        placeholder="e.g. 2025pietad045@poornima.org"
+                        required
+                        className="w-full px-4 py-3 rounded-lg border border-[#747775] dark:border-[#8e918f] focus:border-[#0b57d0] dark:focus:border-[#a8c7fa] focus:ring-1 focus:ring-[#0b57d0] bg-transparent text-sm outline-none transition-all font-mono"
+                      />
+                      <p className="text-[11px] text-[#5f6368] dark:text-[#8e918f] mt-1.5">
+                        Must end with @poornima.org
+                      </p>
+                    </div>
+
+                    {/* Google Action Bar with "Create account" and "Next" blue pill */}
+                    <div className="flex items-center justify-between pt-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setError('');
+                          setViewState('chooser');
+                        }}
+                        className="text-xs sm:text-sm font-medium text-[#0b57d0] dark:text-[#a8c7fa] hover:underline cursor-pointer"
+                      >
+                        Back to accounts
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-6 py-2.5 rounded-full font-medium text-sm bg-[#0b57d0] hover:bg-[#1a73e8] active:bg-[#0842a0] text-white shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
+                      >
+                        {loading ? (
+                          <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <span>Next</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                  </form>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 3: NEW STUDENT COMPLETION VIEW */}
+          {viewState === 'complete_profile' && (
+            <div className="p-6 sm:p-10">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 md:gap-8">
+                
+                <div className="md:col-span-5 flex flex-col justify-start">
+                  <div className="mb-4">
+                    <GoogleIcon className="w-10 h-10" />
+                  </div>
+                  <h2 className="text-2xl sm:text-[28px] font-normal tracking-tight text-[#1f1f1f] dark:text-[#e3e3e3] leading-snug">
+                    Almost done!
+                  </h2>
+                  <p className="text-sm text-[#444746] dark:text-[#c4c7c5] mt-2">
+                    Enter your PIET academic details to finish registering your account.
+                  </p>
+                  <p className="text-xs text-[#5f6368] dark:text-[#8e918f] mt-3 font-mono">
+                    {emailInput}
+                  </p>
+                </div>
+
+                <div className="md:col-span-7">
+                  <form onSubmit={handleCompleteProfile} className="space-y-4">
+                    
+                    {error && (
+                      <div className="p-3 rounded-xl bg-[#fdeded] dark:bg-[#3c1e1e] border border-[#f5c2c7] dark:border-[#842029] text-[#b3261e] dark:text-[#f2b8b5] text-xs flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                        <span>{error}</span>
+                      </div>
+                    )}
+
+                    <div>
+                      <label className="block text-xs font-medium text-[#444746] dark:text-[#c4c7c5] mb-1">
+                        Registration Number *
+                      </label>
+                      <input
+                        type="text"
+                        value={completionData.regNo}
+                        onChange={(e) => setCompletionData({ ...completionData, regNo: e.target.value.toUpperCase() })}
+                        placeholder="e.g. PIET25AD045"
+                        required
+                        className="w-full px-4 py-2.5 rounded-lg border border-[#747775] dark:border-[#8e918f] focus:border-[#0b57d0] bg-transparent text-sm uppercase font-mono outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-[#444746] dark:text-[#c4c7c5] mb-1">
+                          Department
+                        </label>
+                        <select
+                          value={completionData.department}
+                          onChange={(e) => setCompletionData({ ...completionData, department: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-[#747775] dark:border-[#8e918f] bg-transparent text-xs sm:text-sm outline-none"
+                        >
+                          {COLLEGE_CONFIG.departments.map(d => (
+                            <option key={d.id} value={d.id} className="dark:bg-slate-900">{d.short}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-[#444746] dark:text-[#c4c7c5] mb-1">
+                          Section
+                        </label>
+                        <select
+                          value={completionData.section}
+                          onChange={(e) => setCompletionData({ ...completionData, section: e.target.value })}
+                          className="w-full px-3 py-2 rounded-lg border border-[#747775] dark:border-[#8e918f] bg-transparent text-xs sm:text-sm outline-none"
+                        >
+                          {COLLEGE_CONFIG.sections.map(s => (
+                            <option key={s} value={s} className="dark:bg-slate-900">Section {s}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end pt-4">
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="px-6 py-2.5 rounded-full font-medium text-sm bg-[#0b57d0] hover:bg-[#1a73e8] text-white shadow-sm transition-all flex items-center gap-2 cursor-pointer disabled:opacity-70"
+                      >
+                        {loading ? (
+                          <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <span>Complete Sign In</span>
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+
+                  </form>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {/* Bottom Footer (Matching Google standard footer) */}
+          <div className="px-6 sm:px-10 py-3.5 bg-[#f8f9fa] dark:bg-[#18191a] border-t border-[#dadce0] dark:border-[#444746] flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-[#5f6368] dark:text-[#8e918f]">
+            <div className="flex items-center gap-1.5 cursor-pointer hover:text-[#1f1f1f] dark:hover:text-white transition-colors">
+              <Globe className="w-3.5 h-3.5" />
+              <span>English (United States)</span>
+            </div>
+
+            <div className="flex items-center gap-4 text-[11px]">
+              <span className="hover:text-[#1f1f1f] dark:hover:text-white cursor-pointer">Help</span>
+              <span className="hover:text-[#1f1f1f] dark:hover:text-white cursor-pointer">Privacy</span>
+              <span className="hover:text-[#1f1f1f] dark:hover:text-white cursor-pointer">Terms</span>
             </div>
           </div>
+
         </motion.div>
       </div>
     </AnimatePresence>

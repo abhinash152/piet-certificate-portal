@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Moon, Sun, ShieldCheck, LogOut, BookOpen, PlusCircle, LayoutDashboard } from 'lucide-react';
 import { COLLEGE_CONFIG } from '../config/collegeConfig';
 
-export function Header({ currentView, setCurrentView, studentSubView, setStudentSubView }) {
+export function Header({ currentView, setCurrentView, studentSubView, setStudentSubView, openGoogleSignIn }) {
   const { theme, toggleTheme } = useTheme();
   const { mentor, isAuthenticated: isMentorAuth, logout: mentorLogout, student, isStudentAuthenticated, studentLogout } = useAuth();
 
@@ -143,6 +143,22 @@ export function Header({ currentView, setCurrentView, studentSubView, setStudent
                 <Moon className="w-3.5 sm:w-4 h-3.5 sm:h-4 text-slate-700" />
               )}
             </button>
+
+            {/* Google "Sign in" Blue Pill Button (matching user screenshot) */}
+            {!isStudentAuthenticated && !isMentorAuth && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (openGoogleSignIn) {
+                    openGoogleSignIn(currentView === 'mentor' ? 'mentor' : 'student');
+                  }
+                }}
+                className="px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full font-medium text-xs sm:text-sm bg-[#0b57d0] hover:bg-[#1a73e8] active:bg-[#0842a0] text-white shadow-sm hover:shadow transition-all flex items-center gap-1.5 cursor-pointer"
+                title="Sign in with your Google College Account"
+              >
+                <span>Sign in</span>
+              </button>
+            )}
 
           </div>
 
