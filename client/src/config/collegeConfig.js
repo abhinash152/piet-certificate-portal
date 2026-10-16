@@ -16,11 +16,16 @@ export const COLLEGE_CONFIG = {
     crest: "/piet-crest-logo.png"
   },
 
-  // Configurable departments
+  // Configurable Branches (strictly 3 branches: AI&DS, CS&DS, CS&AI)
+  branches: [
+    { id: "AI&DS", label: "Artificial Intelligence & Data Science (AI&DS)", short: "AI&DS", name: "AI&DS" },
+    { id: "CS&DS", label: "Computer Science & Data Science (CS&DS)", short: "CS&DS", name: "CS&DS" },
+    { id: "CS&AI", label: "Computer Science & Artificial Intelligence (CS&AI)", short: "CS&AI", name: "CS&AI" },
+  ],
   departments: [
-    { id: "CS-Core", label: "Computer Science & Engineering (Core)", short: "CS-Core", code: "CS" },
-    { id: "AI&DS", label: "Artificial Intelligence & Data Science", short: "AI&DS", code: "AIDS" },
-    { id: "IOT", label: "Internet of Things (IoT)", short: "IOT", code: "IOT" },
+    { id: "AI&DS", label: "Artificial Intelligence & Data Science (AI&DS)", short: "AI&DS", name: "AI&DS" },
+    { id: "CS&DS", label: "Computer Science & Data Science (CS&DS)", short: "CS&DS", name: "CS&DS" },
+    { id: "CS&AI", label: "Computer Science & Artificial Intelligence (CS&AI)", short: "CS&AI", name: "CS&AI" },
   ],
 
   // Total 8 Sections (A to H) as per PIET structure

@@ -77,7 +77,7 @@ export function MentorDashboard({ addToast }) {
     email: '',
     username: '',
     password: '',
-    department: 'CS-Core',
+    department: 'AI&DS',
     role: 'faculty_mentor'
   });
 
@@ -190,7 +190,7 @@ export function MentorDashboard({ addToast }) {
           email: '',
           username: '',
           password: '',
-          department: 'CS-Core',
+          department: 'AI&DS',
           role: 'faculty_mentor'
         });
         fetchAdmins();
@@ -569,15 +569,15 @@ export function MentorDashboard({ addToast }) {
             />
           </div>
 
-          {/* Department Filter */}
+          {/* Branch Filter */}
           <div>
             <select
               value={selectedDept}
               onChange={(e) => setSelectedDept(e.target.value)}
               className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-xs sm:text-sm focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
             >
-              <option value="ALL">All Departments</option>
-              {COLLEGE_CONFIG.departments.map((d) => (
+              <option value="ALL">All Branches</option>
+              {COLLEGE_CONFIG.branches.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.short}
                 </option>
@@ -655,7 +655,7 @@ export function MentorDashboard({ addToast }) {
               <tr>
                 <th className="py-4 px-4 sm:px-6">Reg Number</th>
                 <th className="py-4 px-4 sm:px-6">Student Name (Click to View)</th>
-                <th className="py-4 px-4 sm:px-6">Dept & Sec</th>
+                <th className="py-4 px-4 sm:px-6">Branch & Sec</th>
                 <th className="py-4 px-4 sm:px-6 text-center">Passing Year</th>
                 <th className="py-4 px-4 sm:px-6 text-center">Academic</th>
                 <th className="py-4 px-4 sm:px-6 text-center">Non-Academic</th>
@@ -833,7 +833,7 @@ export function MentorDashboard({ addToast }) {
                       {studentDetails.student.reg_no}
                     </span>
                     <span className="text-xs text-slate-500">
-                      Department of {studentDetails.student.department} • Section {studentDetails.student.section}
+                      Branch: {studentDetails.student.department} • Section {studentDetails.student.section}
                     </span>
                     <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                       Passing Year: {studentDetails.student.passing_year || '2026'}
@@ -1154,14 +1154,14 @@ export function MentorDashboard({ addToast }) {
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                          Department
+                          Branch
                         </label>
                         <select
                           value={newAdmin.department}
                           onChange={(e) => setNewAdmin({ ...newAdmin, department: e.target.value })}
                           className="w-full px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs text-slate-900 dark:text-white"
                         >
-                          {COLLEGE_CONFIG.departments.map((d) => (
+                          {COLLEGE_CONFIG.branches.map((d) => (
                             <option key={d.id} value={d.id}>
                               {d.short}
                             </option>
@@ -1229,7 +1229,7 @@ export function MentorDashboard({ addToast }) {
                           <th className="py-2.5 px-3">Name</th>
                           <th className="py-2.5 px-3">Username</th>
                           <th className="py-2.5 px-3">Email</th>
-                          <th className="py-2.5 px-3">Dept</th>
+                          <th className="py-2.5 px-3">Branch</th>
                           <th className="py-2.5 px-3">Role</th>
                         </tr>
                       </thead>

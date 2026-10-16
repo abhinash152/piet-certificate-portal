@@ -346,7 +346,7 @@ export function StudentDashboard({ onStartUpload, addToast }) {
                 {studentData?.reg_no || student?.reg_no}
               </span>
               <span className="text-xs text-white/80">
-                Department of {studentData?.department || student?.department} • Section{' '}
+                Branch: {studentData?.department || student?.department} • Section{' '}
                 {studentData?.section || student?.section} •{' '}
                 {studentData?.current_year || student?.current_year || 'I st Year'}
               </span>
@@ -981,15 +981,15 @@ export function StudentDashboard({ onStartUpload, addToast }) {
               />
             </div>
 
-            {/* Department Filter */}
+            {/* Branch Filter */}
             <div>
               <select
                 value={peerDept}
                 onChange={(e) => setPeerDept(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
               >
-                <option value="ALL">All Departments</option>
-                {COLLEGE_CONFIG.departments.map((d) => (
+                <option value="ALL">All Branches</option>
+                {COLLEGE_CONFIG.branches.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.short}
                   </option>

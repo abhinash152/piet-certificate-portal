@@ -197,14 +197,14 @@ export function StudentDetailsStep({ studentData, setStudentData, onContinue, ad
             )}
           </div>
 
-          {/* Department & Section Row */}
+          {/* Branch & Section Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             
-            {/* Department Dropdown */}
+            {/* Branch Dropdown */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-2">
                 <Building className="w-4 h-4 text-piet-500" />
-                Department <span className="text-rose-500">*</span>
+                Branch <span className="text-rose-500">*</span>
               </label>
               <select
                 value={studentData.department}
@@ -220,15 +220,15 @@ export function StudentDetailsStep({ studentData, setStudentData, onContinue, ad
                   backgroundSize: '1.25rem'
                 }}
               >
-                <option value="">Select Department</option>
-                {COLLEGE_CONFIG.departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.label} ({dept.short})
+                <option value="">Select Branch</option>
+                {COLLEGE_CONFIG.branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.label} ({b.short})
                   </option>
                 ))}
               </select>
               {touched.department && !isDeptValid && (
-                <p className="text-xs text-rose-500 mt-1 font-medium">Please select your enrolled department.</p>
+                <p className="text-xs text-rose-500 mt-1 font-medium">Please select your enrolled branch.</p>
               )}
             </div>
 
@@ -340,7 +340,7 @@ export function StudentDetailsStep({ studentData, setStudentData, onContinue, ad
 
             {!isFormValid && (
               <p className="text-center text-xs text-slate-500 dark:text-slate-400 mt-2.5">
-                Fill in valid Department, Section, Name and Registration Number to enable Continue.
+                Fill in valid Branch, Section, Name and Registration Number to enable Continue.
               </p>
             )}
           </div>
