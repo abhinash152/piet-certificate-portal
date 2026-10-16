@@ -1,10 +1,12 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import archiver from 'archiver';
+import XLSX from 'xlsx';
 import db from '../db/database.js';
 import { authenticateMentor } from '../middleware/auth.js';
 import { sanitizePathComponent } from '../utils/hashUtils.js';
@@ -12,7 +14,7 @@ import { sanitizePathComponent } from '../utils/hashUtils.js';
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadsBaseDir = path.resolve(__dirname, '../../uploads');
+const uploadsBaseDir = process.env.UPLOADS_DIR ? path.resolve(process.env.UPLOADS_DIR) : path.resolve(__dirname, '../../uploads');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'piet_portal_super_secure_jwt_secret_key_2025';
 
@@ -81,8 +83,8 @@ router.get('/dashboard', authenticateMentor, (req, res) => {
   try {
     const totalStudents = db.prepare('SELECT COUNT(*) as count FROM students').get().count;
     const totalCertificates = db.prepare('SELECT COUNT(*) as count FROM certificates').get().count;
-    const totalWithin = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE category = 'within'").get().count;
-    const totalOutside = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE category = 'outside'").get().count;
+    const totalAcademic = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE category IN ('academic', 'within')").get().count;
+    const totalNonAcademic = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE category IN ('non_academic', 'non-academic', 'outside')").get().count;
     const totalFlagged = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE status = 'flagged'").get().count;
 
     // Breakdown by department
@@ -91,18 +93,21 @@ router.get('/dashboard', authenticateMentor, (req, res) => {
         s.department,
         COUNT(DISTINCT s.reg_no) as student_count,
         COUNT(c.id) as cert_count,
-        COUNT(CASE WHEN c.category = 'within' THEN 1 END) as within_count,
-        COUNT(CASE WHEN c.category = 'outside' THEN 1 END) as outside_count
+        COUNT(CASE WHEN c.category IN ('academic', 'within') THEN 1 END) as academic_count,
+        COUNT(CASE WHEN c.category IN ('non_academic', 'non-academic', 'outside') THEN 1 END) as non_academic_count,
+        COUNT(CASE WHEN c.category IN ('academic', 'within') THEN 1 END) as within_count,
+        COUNT(CASE WHEN c.category IN ('non_academic', 'non-academic', 'outside') THEN 1 END) as outside_count
       FROM students s
       LEFT JOIN certificates c ON s.reg_no = c.student_reg_no
       GROUP BY s.department
     `).all();
 
-    // Recent uploads (latest 6)
+    // Recent uploads (latest 8)
     const recentCertificates = db.prepare(`
       SELECT 
         c.id, c.title, c.category, c.status, c.created_at, c.original_filename,
-        s.reg_no, s.name as student_name, s.department, s.section
+        s.reg_no, s.name as student_name, s.department, s.section,
+        COALESCE(s.passing_year, '2026') as passing_year
       FROM certificates c
       JOIN students s ON c.student_reg_no = s.reg_no
       ORDER BY c.created_at DESC
@@ -114,8 +119,12 @@ router.get('/dashboard', authenticateMentor, (req, res) => {
       stats: {
         totalStudents,
         totalCertificates,
-        totalWithin,
-        totalOutside,
+        academicCertificates: totalAcademic,
+        nonAcademicCertificates: totalNonAcademic,
+        totalAcademic,
+        totalNonAcademic,
+        totalWithin: totalAcademic,
+        totalOutside: totalNonAcademic,
         totalFlagged,
         deptStats,
         recentCertificates
@@ -132,7 +141,7 @@ router.get('/dashboard', authenticateMentor, (req, res) => {
  */
 router.get('/database/tables', authenticateMentor, (req, res) => {
   try {
-    const studentsTable = db.prepare('SELECT reg_no, name, department, section, current_year, email, created_at FROM students ORDER BY created_at DESC LIMIT 50').all();
+    const studentsTable = db.prepare('SELECT reg_no, name, department, section, current_year, passing_year, email, created_at FROM students ORDER BY created_at DESC LIMIT 50').all();
     const certsTable = db.prepare('SELECT id, student_reg_no, category, title, issue_date, file_size, status, created_at FROM certificates ORDER BY created_at DESC LIMIT 50').all();
     const mentorsTable = db.prepare('SELECT id, username, email, full_name, department, role, created_at FROM mentors').all();
 
@@ -159,7 +168,7 @@ router.get('/database/tables', authenticateMentor, (req, res) => {
 
 /**
  * GET /api/mentor/students
- * Filtered student list with certificates summary
+ * Filtered student list sorted in alphabetical order by student name
  */
 router.get('/students', authenticateMentor, (req, res) => {
   try {
@@ -172,12 +181,15 @@ router.get('/students', authenticateMentor, (req, res) => {
         s.department,
         s.section,
         COALESCE(s.current_year, 'I st Year') as current_year,
+        COALESCE(s.passing_year, '2026') as passing_year,
         COALESCE(s.semester, 'Semester 1') as semester,
         s.email,
         s.created_at,
         COUNT(c.id) as total_certificates,
-        COUNT(CASE WHEN c.category = 'within' THEN 1 END) as within_count,
-        COUNT(CASE WHEN c.category = 'outside' THEN 1 END) as outside_count,
+        COUNT(CASE WHEN c.category IN ('academic', 'within') THEN 1 END) as academic_count,
+        COUNT(CASE WHEN c.category IN ('non_academic', 'non-academic', 'outside') THEN 1 END) as non_academic_count,
+        COUNT(CASE WHEN c.category IN ('academic', 'within') THEN 1 END) as within_count,
+        COUNT(CASE WHEN c.category IN ('non_academic', 'non-academic', 'outside') THEN 1 END) as outside_count,
         COUNT(CASE WHEN c.status = 'flagged' THEN 1 END) as flagged_count,
         MAX(c.created_at) as last_upload_at
       FROM students s
@@ -211,16 +223,17 @@ router.get('/students', authenticateMentor, (req, res) => {
       params.push(endDate + 'T23:59:59.999Z');
     }
 
-    query += ' GROUP BY s.reg_no ORDER BY last_upload_at DESC NULLS LAST, s.reg_no ASC';
+    // Default sorting in alphabetical order by student name
+    query += ' GROUP BY s.reg_no ORDER BY LOWER(s.name) ASC, s.reg_no ASC';
 
     let students = db.prepare(query).all(...params);
 
     // If filtering by specific category only, filter students with >0 in that category
     if (category && category !== 'ALL') {
-      if (category === 'within') {
-        students = students.filter(s => s.within_count > 0);
-      } else if (category === 'outside') {
-        students = students.filter(s => s.outside_count > 0);
+      if (category === 'academic' || category === 'within') {
+        students = students.filter(s => s.academic_count > 0);
+      } else if (category === 'non_academic' || category === 'outside') {
+        students = students.filter(s => s.non_academic_count > 0);
       }
     }
 
@@ -232,7 +245,7 @@ router.get('/students', authenticateMentor, (req, res) => {
 
 /**
  * GET /api/mentor/students/:regNo
- * Detailed certificates of a student grouped into within and outside
+ * Detailed certificates of a student grouped into academic and non-academic
  */
 router.get('/students/:regNo', authenticateMentor, (req, res) => {
   try {
@@ -253,21 +266,25 @@ router.get('/students/:regNo', authenticateMentor, (req, res) => {
       ORDER BY issue_date DESC, created_at DESC
     `).all(regNo);
 
-    const withinCertificates = certificates.filter(c => c.category === 'within');
-    const outsideCertificates = certificates.filter(c => c.category === 'outside');
+    const academicCertificates = certificates.filter(c => c.category === 'academic' || c.category === 'within');
+    const nonAcademicCertificates = certificates.filter(c => c.category === 'non_academic' || c.category === 'non-academic' || c.category === 'outside');
 
     res.json({
       success: true,
       student,
       summary: {
         total: certificates.length,
-        withinCount: withinCertificates.length,
-        outsideCount: outsideCertificates.length,
+        academicCount: academicCertificates.length,
+        nonAcademicCount: nonAcademicCertificates.length,
+        withinCount: academicCertificates.length,
+        outsideCount: nonAcademicCertificates.length,
         flaggedCount: certificates.filter(c => c.status === 'flagged').length
       },
       grouped: {
-        within: withinCertificates,
-        outside: outsideCertificates
+        academic: academicCertificates,
+        non_academic: nonAcademicCertificates,
+        within: academicCertificates,
+        outside: nonAcademicCertificates
       },
       certificates
     });
@@ -459,7 +476,7 @@ router.get('/download/section', authenticateMentor, (req, res) => {
 
 /**
  * GET /api/mentor/export-csv
- * Exports student certificate summary to CSV for internal marks calculation
+ * Exports student certificate summary to CSV
  */
 router.get('/export-csv', authenticateMentor, (req, res) => {
   try {
@@ -472,12 +489,11 @@ router.get('/export-csv', authenticateMentor, (req, res) => {
         s.department,
         s.section,
         COALESCE(s.current_year, 'I st Year') as current_year,
+        COALESCE(s.passing_year, '2026') as passing_year,
         s.email,
         COUNT(c.id) as total_certificates,
-        COUNT(CASE WHEN c.category = 'within' AND c.status = 'valid' THEN 1 END) as within_valid,
-        COUNT(CASE WHEN c.category = 'outside' AND c.status = 'valid' THEN 1 END) as outside_valid,
-        COUNT(CASE WHEN c.category = 'within' THEN 1 END) as within_count,
-        COUNT(CASE WHEN c.category = 'outside' THEN 1 END) as outside_count,
+        COUNT(CASE WHEN c.category IN ('academic', 'within') THEN 1 END) as academic_count,
+        COUNT(CASE WHEN c.category IN ('non_academic', 'non-academic', 'outside') THEN 1 END) as non_academic_count,
         COUNT(CASE WHEN c.status = 'flagged' THEN 1 END) as flagged_count,
         MAX(c.created_at) as last_submission_date
       FROM students s
@@ -495,7 +511,7 @@ router.get('/export-csv', authenticateMentor, (req, res) => {
       params.push(section);
     }
 
-    query += ' GROUP BY s.reg_no ORDER BY s.department, s.section, s.reg_no';
+    query += ' GROUP BY s.reg_no ORDER BY LOWER(s.name) ASC';
 
     const records = db.prepare(query).all(...params);
 
@@ -506,13 +522,12 @@ router.get('/export-csv', authenticateMentor, (req, res) => {
       'Department',
       'Section',
       'Current Year',
+      'Passing Year',
       'Email',
-      'Within College Certificates',
-      'Outside College Certificates',
+      'Academic Certificates',
+      'Non-Academic Certificates',
+      'Total Certificates',
       'Flagged (Invalid)',
-      'Total Valid Certificates',
-      'SODECA / Internal Activity Marks (Max 50)',
-      'Performance Grade',
       'Last Submission Date'
     ];
 
@@ -523,40 +538,203 @@ router.get('/export-csv', authenticateMentor, (req, res) => {
     };
 
     const rows = records.map(r => {
-      const validTotal = Math.max(0, r.total_certificates - r.flagged_count);
-      const withinValid = r.within_valid || 0;
-      const outsideValid = r.outside_valid || 0;
-      // Formula: 5 points for within college, 10 points for outside college, max capped at 50
-      const marks = Math.min(50, (withinValid * 5) + (outsideValid * 10));
-      let grade = 'C (Needs Improvement)';
-      if (marks >= 45) grade = 'O (Outstanding)';
-      else if (marks >= 38) grade = 'A+ (Excellent)';
-      else if (marks >= 30) grade = 'A (Very Good)';
-      else if (marks >= 20) grade = 'B (Good)';
-
       return [
         escapeCsv(r.reg_no),
         escapeCsv(r.name),
         escapeCsv(r.department),
         escapeCsv(r.section),
         escapeCsv(r.current_year),
+        escapeCsv(r.passing_year),
         escapeCsv(r.email || 'N/A'),
-        r.within_count || 0,
-        r.outside_count || 0,
+        r.academic_count || 0,
+        r.non_academic_count || 0,
+        r.total_certificates || 0,
         r.flagged_count || 0,
-        validTotal,
-        marks,
-        escapeCsv(grade),
         escapeCsv(r.last_submission_date ? new Date(r.last_submission_date).toLocaleDateString() : 'None')
       ].join(',');
     });
 
     const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
 
-    const filename = `PIET_Internal_Marks_Summary_${department || 'All'}_${section || 'All'}_${Date.now()}.csv`;
+    const filename = `PIET_Student_Certificates_${department || 'All'}_${section || 'All'}_${Date.now()}.csv`;
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     res.send(csvContent);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * GET /api/mentor/export-excel
+ * Exports student certificate summary directly as an Excel (.xlsx) file
+ */
+router.get('/export-excel', authenticateMentor, (req, res) => {
+  try {
+    const { department, section } = req.query;
+
+    let query = `
+      SELECT 
+        s.reg_no,
+        s.name,
+        s.department,
+        s.section,
+        COALESCE(s.current_year, 'I st Year') as current_year,
+        COALESCE(s.passing_year, '2026') as passing_year,
+        s.email,
+        COUNT(c.id) as total_certificates,
+        COUNT(CASE WHEN c.category IN ('academic', 'within') THEN 1 END) as academic_count,
+        COUNT(CASE WHEN c.category IN ('non_academic', 'non-academic', 'outside') THEN 1 END) as non_academic_count,
+        COUNT(CASE WHEN c.status = 'flagged' THEN 1 END) as flagged_count,
+        MAX(c.created_at) as last_submission_date
+      FROM students s
+      LEFT JOIN certificates c ON s.reg_no = c.student_reg_no
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (department && department !== 'ALL') {
+      query += ' AND s.department = ?';
+      params.push(department);
+    }
+    if (section && section !== 'ALL') {
+      query += ' AND s.section = ?';
+      params.push(section);
+    }
+
+    query += ' GROUP BY s.reg_no ORDER BY LOWER(s.name) ASC';
+
+    const records = db.prepare(query).all(...params);
+
+    const excelData = records.map(r => ({
+      'Registration Number': r.reg_no,
+      'Student Name': r.name,
+      'Department': r.department,
+      'Section': r.section,
+      'Current Year': r.current_year,
+      'Passing Year': r.passing_year,
+      'Email': r.email || 'N/A',
+      'Academic Certificates': r.academic_count || 0,
+      'Non-Academic Certificates': r.non_academic_count || 0,
+      'Total Certificates': r.total_certificates || 0,
+      'Flagged (Invalid)': r.flagged_count || 0,
+      'Last Submission Date': r.last_submission_date ? new Date(r.last_submission_date).toLocaleDateString() : 'None'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(excelData);
+
+    // Auto-fit column widths
+    const columnWidths = [
+      { wch: 18 }, // Reg No
+      { wch: 24 }, // Student Name
+      { wch: 14 }, // Dept
+      { wch: 10 }, // Section
+      { wch: 14 }, // Current Year
+      { wch: 14 }, // Passing Year
+      { wch: 30 }, // Email
+      { wch: 22 }, // Academic
+      { wch: 24 }, // Non-Academic
+      { wch: 18 }, // Total
+      { wch: 18 }, // Flagged
+      { wch: 20 }  // Last Sub
+    ];
+    worksheet['!cols'] = columnWidths;
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Students_Certificates');
+
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    const filename = `PIET_Student_Certificates_${department || 'All'}_${section || 'All'}_${Date.now()}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * GET /api/mentor/admins
+ * Retrieve list of all registered portal administrators and mentors
+ */
+router.get('/admins', authenticateMentor, (req, res) => {
+  try {
+    const admins = db.prepare(
+      'SELECT id, username, email, full_name, department, role, created_at FROM mentors ORDER BY created_at DESC'
+    ).all();
+    res.json({ success: true, count: admins.length, admins });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+/**
+ * POST /api/mentor/admins
+ * Allows an authenticated administrator to create and add another administrator
+ */
+router.post('/admins', authenticateMentor, (req, res) => {
+  try {
+    const username = req.body.username;
+    const email = req.body.email;
+    const password = req.body.password;
+    const fullName = req.body.full_name || req.body.fullName;
+    const department = req.body.department;
+    const role = req.body.role;
+
+    if (!username || !email || !password || !fullName) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide full name, email, username, and password for the new administrator.'
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admin password must be at least 6 characters long to secure access.'
+      });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanUsername = username.trim().toLowerCase();
+    const cleanName = fullName.trim();
+    const cleanDept = (department && department.trim()) || 'All Departments';
+    const cleanRole = (role && role.trim().toLowerCase()) || 'admin';
+
+    const existing = db.prepare(
+      'SELECT id, username, email FROM mentors WHERE LOWER(email) = ? OR LOWER(username) = ?'
+    ).get(cleanEmail, cleanUsername);
+
+    if (existing) {
+      return res.status(409).json({
+        success: false,
+        message: 'An administrator or mentor with this email or username already exists.'
+      });
+    }
+
+    const adminId = crypto.randomUUID();
+    const passwordHash = bcrypt.hashSync(password, 10);
+    const now = new Date().toISOString();
+
+    db.prepare(`
+      INSERT INTO mentors (id, username, email, password_hash, full_name, department, role, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(adminId, cleanUsername, cleanEmail, passwordHash, cleanName, cleanDept, cleanRole, now);
+
+    res.status(201).json({
+      success: true,
+      message: `Administrator '${cleanName}' created successfully!`,
+      admin: {
+        id: adminId,
+        username: cleanUsername,
+        email: cleanEmail,
+        full_name: cleanName,
+        department: cleanDept,
+        role: cleanRole,
+        created_at: now
+      }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

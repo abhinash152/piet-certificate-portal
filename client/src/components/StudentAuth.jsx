@@ -19,19 +19,11 @@ export function StudentAuth({ onAuthenticated, addToast }) {
   const [department, setDepartment] = useState('AI&DS');
   const [section, setSection] = useState('A');
   const [currentYear, setCurrentYear] = useState('I st Year');
+  const [passingYear, setPassingYear] = useState('2028');
 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Quick Demo Auto-Fill
-  const handleQuickFillDemo = () => {
-    setEmail('2025pietad999@poornima.org');
-    setPassword('piet@student2025');
-    setMode('login');
-    setError('');
-    addToast('Demo student credentials pre-filled (PIET25AD999).', 'info');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -79,7 +71,8 @@ export function StudentAuth({ onAuthenticated, addToast }) {
         name: name.trim(),
         department,
         section,
-        currentYear
+        currentYear,
+        passingYear
       });
       setLoading(false);
 
@@ -116,24 +109,6 @@ export function StudentAuth({ onAuthenticated, addToast }) {
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Poornima Institute of Engineering & Technology • Autonomous Institution
           </p>
-        </div>
-
-        {/* Demo Student Auto-fill Banner */}
-        <div className="mb-6 p-3.5 rounded-2xl bg-gradient-to-r from-piet-50 to-indigo-50 dark:from-piet-950/40 dark:to-indigo-950/40 border border-piet-200 dark:border-piet-800 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-piet-600" />
-            <div className="text-xs">
-              <span className="font-bold text-slate-800 dark:text-slate-200">Demo Student: </span>
-              <span className="text-slate-600 dark:text-slate-400 font-mono">2025pietad999@poornima.org</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={handleQuickFillDemo}
-            className="text-xs font-bold px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-piet-600 dark:text-piet-400 border border-piet-200 dark:border-piet-700 shadow-sm hover:scale-105 active:scale-95 transition-all"
-          >
-            Auto-Fill
-          </button>
         </div>
 
         {/* Toggle Mode: Sign In vs Register */}
@@ -235,12 +210,12 @@ export function StudentAuth({ onAuthenticated, addToast }) {
                 </div>
               </div>
 
-              {/* Department, Current Year, Section (8 Sections A to H) */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Department, Current Year, Passing Year, Section */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {/* Department */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Department <span className="text-rose-500">*</span>
+                    Dept <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={department}
@@ -256,7 +231,7 @@ export function StudentAuth({ onAuthenticated, addToast }) {
                 {/* Current Year */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Current Year <span className="text-rose-500">*</span>
+                    Year <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={currentYear}
@@ -269,10 +244,26 @@ export function StudentAuth({ onAuthenticated, addToast }) {
                   </select>
                 </div>
 
+                {/* Passing Year */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                    Passing Year <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={passingYear}
+                    onChange={(e) => setPassingYear(e.target.value)}
+                    className="w-full px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 text-xs focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
+                  >
+                    {COLLEGE_CONFIG.passingYears.map(pyr => (
+                      <option key={pyr} value={pyr}>{pyr}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* 8 Sections */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Section (8 Sections) <span className="text-rose-500">*</span>
+                    Section <span className="text-rose-500">*</span>
                   </label>
                   <select
                     value={section}

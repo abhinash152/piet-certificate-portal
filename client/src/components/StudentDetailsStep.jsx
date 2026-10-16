@@ -293,6 +293,36 @@ export function StudentDetailsStep({ studentData, setStudentData, onContinue, ad
             </div>
           </div>
 
+          {/* Passing Year Selection */}
+          <div>
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-piet-500" />
+              Passing Year <span className="text-rose-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
+              {COLLEGE_CONFIG.passingYears.map((yr) => {
+                const isSelected = (studentData.passingYear || studentData.passing_year || '2026') === yr;
+                return (
+                  <button
+                    key={yr}
+                    type="button"
+                    onClick={() => {
+                      handleChange('passingYear', yr);
+                      handleChange('passing_year', yr);
+                    }}
+                    className={`py-2 px-2 rounded-xl text-xs font-mono font-bold border transition-all text-center ${
+                      isSelected
+                        ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 shadow-sm ring-2 ring-emerald-500/20'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                    }`}
+                  >
+                    {yr}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Continue Action Button */}
           <div className="pt-4">
             <button

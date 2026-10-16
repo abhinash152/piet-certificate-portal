@@ -89,7 +89,7 @@ export function SuccessStep({ summary, onSubmitMore, onGoToDashboard }) {
           Submission Successful!
         </h2>
         <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 max-w-md mx-auto">
-          Your certificates have been securely archived in your student dossier at PIET for internal marks credit evaluation.
+          Your certificates have been securely archived in your student dossier at PIET.
         </p>
 
         {/* Dynamic Motivational Quote Card */}
@@ -164,9 +164,9 @@ export function SuccessStep({ summary, onSubmitMore, onGoToDashboard }) {
                 <Building2 className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">Within College</span>
+                <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">Academic Certificates</span>
                 <p className="text-lg font-black text-slate-900 dark:text-white">
-                  {summary?.totalWithinCount ?? summary?.newWithinCount ?? 0}
+                  {summary?.totalAcademicCount ?? summary?.newAcademicCount ?? summary?.totalWithinCount ?? 0}
                 </p>
               </div>
             </div>
@@ -176,9 +176,9 @@ export function SuccessStep({ summary, onSubmitMore, onGoToDashboard }) {
                 <Globe className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-[11px] font-medium text-purple-700 dark:text-purple-300">Outside College</span>
+                <span className="text-[11px] font-medium text-purple-700 dark:text-purple-300">Non-Academic Certificates</span>
                 <p className="text-lg font-black text-slate-900 dark:text-white">
-                  {summary?.totalOutsideCount ?? summary?.newOutsideCount ?? 0}
+                  {summary?.totalNonAcademicCount ?? summary?.newNonAcademicCount ?? summary?.totalOutsideCount ?? 0}
                 </p>
               </div>
             </div>

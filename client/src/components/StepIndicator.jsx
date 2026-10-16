@@ -4,7 +4,7 @@ import { Check, User, Upload, CheckCircle2 } from 'lucide-react';
 
 const STEPS = [
   { step: 1, title: 'Student Details', subtitle: 'Dept, Section & Reg No', icon: User },
-  { step: 2, title: 'Upload Certificates', subtitle: 'Within & Outside College', icon: Upload },
+  { step: 2, title: 'Upload Certificates', subtitle: 'Academic & Non-Academic', icon: Upload },
   { step: 3, title: 'Submission Success', subtitle: 'Summary & Motivation', icon: CheckCircle2 },
 ];
 

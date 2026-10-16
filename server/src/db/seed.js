@@ -43,7 +43,7 @@ if (!existingMentor) {
 // Default password for sample students: piet@student2025
 const studentDefaultPasswordHash = bcrypt.hashSync('piet@student2025', 10);
 
-// 2. Sample Students with PIET25ADxxx format & 8 Sections (A to H) & Current Year (I st, II nd, III rd, IV th)
+// 2. Sample Students with PIET25ADxxx format & 8 Sections (A to H) & Current Year & Passing Year
 const sampleStudents = [
   {
     reg_no: 'PIET25AD999',
@@ -51,6 +51,7 @@ const sampleStudents = [
     department: 'AI&DS',
     section: 'A',
     current_year: 'II nd Year',
+    passing_year: '2027',
     email: '2025pietad999@poornima.org'
   },
   {
@@ -59,6 +60,7 @@ const sampleStudents = [
     department: 'AI&DS',
     section: 'B',
     current_year: 'I st Year',
+    passing_year: '2028',
     email: '2025pietad045@poornima.org'
   },
   {
@@ -67,6 +69,7 @@ const sampleStudents = [
     department: 'CS-Core',
     section: 'C',
     current_year: 'III rd Year',
+    passing_year: '2026',
     email: '2025pietcs019@poornima.org'
   },
   {
@@ -75,6 +78,7 @@ const sampleStudents = [
     department: 'CS-Core',
     section: 'D',
     current_year: 'II nd Year',
+    passing_year: '2027',
     email: '2025pietcs088@poornima.org'
   },
   {
@@ -83,6 +87,7 @@ const sampleStudents = [
     department: 'IOT',
     section: 'E',
     current_year: 'IV th Year',
+    passing_year: '2025',
     email: '2025pietiot005@poornima.org'
   },
   {
@@ -91,6 +96,7 @@ const sampleStudents = [
     department: 'IOT',
     section: 'F',
     current_year: 'I st Year',
+    passing_year: '2028',
     email: '2025pietiot023@poornima.org'
   }
 ];
@@ -286,13 +292,14 @@ db.prepare("DELETE FROM students WHERE reg_no = 'PIET25AD012' OR LOWER(email) = 
 // Insert Students
 const now = new Date().toISOString();
 const insertStudent = db.prepare(`
-  INSERT INTO students (reg_no, name, department, section, current_year, email, password_hash, created_at, updated_at)
-  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  INSERT INTO students (reg_no, name, department, section, current_year, passing_year, email, password_hash, created_at, updated_at)
+  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   ON CONFLICT(reg_no) DO UPDATE SET
     name = excluded.name,
     department = excluded.department,
     section = excluded.section,
     current_year = excluded.current_year,
+    passing_year = excluded.passing_year,
     email = excluded.email,
     password_hash = excluded.password_hash,
     updated_at = excluded.updated_at
@@ -305,13 +312,14 @@ for (const s of sampleStudents) {
     s.department,
     s.section,
     s.current_year,
+    s.passing_year || '2026',
     s.email,
     studentDefaultPasswordHash,
     now,
     now
   );
 }
-console.log(`✅ Seeded ${sampleStudents.length} students with default password 'piet@student2025' across departments.`);
+console.log(`✅ Seeded ${sampleStudents.length} students with passing years and default password across departments.`);
 
 // Insert Certificates
 const insertCert = db.prepare(`

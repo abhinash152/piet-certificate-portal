@@ -19,7 +19,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'piet_portal_super_secure_jwt_secre
  */
 router.post('/register', (req, res) => {
   try {
-    const { email, password, regNo, name, department, section, currentYear } = req.body;
+    const { email, password, regNo, name, department, section, currentYear, passingYear } = req.body;
 
     if (!email || !password || !regNo || !department || !section) {
       return res.status(400).json({
@@ -41,6 +41,7 @@ router.post('/register', (req, res) => {
     const cleanDept = sanitizePathComponent(department);
     const cleanSection = sanitizePathComponent(section.toUpperCase());
     const cleanYear = currentYear || 'I st Year';
+    const cleanPassingYear = passingYear ? passingYear.trim() : '2026';
     const now = new Date().toISOString();
 
     // Check if email or regNo already has a password set
@@ -57,19 +58,20 @@ router.post('/register', (req, res) => {
     const passwordHash = bcrypt.hashSync(password, 10);
 
     const upsertStudent = db.prepare(`
-      INSERT INTO students (reg_no, name, department, section, current_year, email, password_hash, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO students (reg_no, name, department, section, current_year, passing_year, email, password_hash, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(reg_no) DO UPDATE SET
         name = excluded.name,
         department = excluded.department,
         section = excluded.section,
         current_year = excluded.current_year,
+        passing_year = excluded.passing_year,
         email = excluded.email,
         password_hash = excluded.password_hash,
         updated_at = excluded.updated_at
     `);
 
-    upsertStudent.run(cleanRegNo, cleanName, cleanDept, cleanSection, cleanYear, cleanEmail, passwordHash, now, now);
+    upsertStudent.run(cleanRegNo, cleanName, cleanDept, cleanSection, cleanYear, cleanPassingYear, cleanEmail, passwordHash, now, now);
 
     const token = jwt.sign(
       { regNo: cleanRegNo, email: cleanEmail, role: 'student' },
@@ -83,6 +85,7 @@ router.post('/register', (req, res) => {
       department: cleanDept,
       section: cleanSection,
       current_year: cleanYear,
+      passing_year: cleanPassingYear,
       email: cleanEmail
     };
 
@@ -116,7 +119,7 @@ router.post('/login', (req, res) => {
     const cleanId = identifier.trim().toLowerCase();
 
     const student = db.prepare(`
-      SELECT reg_no, name, department, section, current_year, email, password_hash
+      SELECT reg_no, name, department, section, current_year, passing_year, email, password_hash
       FROM students
       WHERE LOWER(email) = ? OR LOWER(reg_no) = ?
     `).get(cleanId, cleanId);
@@ -160,6 +163,7 @@ router.post('/login', (req, res) => {
         department: student.department,
         section: student.section,
         current_year: student.current_year || 'I st Year',
+        passing_year: student.passing_year || '2026',
         email: student.email
       }
     });
@@ -186,22 +190,26 @@ router.get('/me', authenticateStudent, (req, res) => {
       ORDER BY created_at DESC
     `).all(student.reg_no);
 
-    const withinCertificates = certificates.filter(c => c.category === 'within');
-    const outsideCertificates = certificates.filter(c => c.category === 'outside');
+    const academicCertificates = certificates.filter(c => c.category === 'academic' || c.category === 'within');
+    const nonAcademicCertificates = certificates.filter(c => c.category === 'non_academic' || c.category === 'non-academic' || c.category === 'outside');
 
     return res.json({
       success: true,
       student,
       summary: {
         totalCertificates: certificates.length,
-        withinCount: withinCertificates.length,
-        outsideCount: outsideCertificates.length,
+        academicCount: academicCertificates.length,
+        nonAcademicCount: nonAcademicCertificates.length,
         flaggedCount: certificates.filter(c => c.status === 'flagged').length,
-        validCount: certificates.filter(c => c.status !== 'flagged').length
+        validCount: certificates.filter(c => c.status !== 'flagged').length,
+        withinCount: academicCertificates.length,
+        outsideCount: nonAcademicCertificates.length
       },
       grouped: {
-        within: withinCertificates,
-        outside: outsideCertificates
+        academic: academicCertificates,
+        non_academic: nonAcademicCertificates,
+        within: academicCertificates,
+        outside: nonAcademicCertificates
       },
       certificates
     });
@@ -285,7 +293,7 @@ router.get('/peers/showcase', (req, res) => {
         c.id, c.student_reg_no, c.category, c.title, c.issue_date, c.description,
         c.file_path, c.original_filename, c.stored_filename, c.file_size, c.mime_type,
         c.status, c.created_at,
-        s.name as student_name, s.department, s.section, s.current_year, s.email
+        s.name as student_name, s.department, s.section, s.current_year, s.passing_year, s.email
       FROM certificates c
       JOIN students s ON c.student_reg_no = s.reg_no
       WHERE c.status = 'valid'

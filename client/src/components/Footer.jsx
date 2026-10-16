@@ -19,7 +19,7 @@ export function Footer() {
             <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center justify-center md:justify-start gap-1.5">
               <span>Made for PIET students</span>
               <span className="text-rose-500 inline-block animate-pulse">❤️</span>
-              <span>for streamlined internal marks verification</span>
+              <span>for streamlined certificate dossier verification</span>
             </p>
           </div>
 

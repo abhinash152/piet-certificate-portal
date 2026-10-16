@@ -1,6 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Building2, Globe, ArrowLeft, ArrowUpRight, UploadCloud, AlertCircle, Sparkles, CheckCircle2 } from 'lucide-react';
+import {
+  GraduationCap,
+  Trophy,
+  ArrowLeft,
+  UploadCloud,
+  AlertCircle,
+  Sparkles,
+  CheckCircle2,
+  AlertTriangle,
+  Info
+} from 'lucide-react';
 import { COLLEGE_CONFIG } from '../config/collegeConfig';
 import { FileDropzone } from './FileDropzone';
 import { FileCard } from './FileCard';
@@ -20,20 +30,21 @@ export function UploadCertificatesStep({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [uploadStage, setUploadStage] = useState('');
 
+  // Total files count across Academic and Non-Academic
   const totalFilesCount = withinFiles.length + outsideFiles.length;
 
-  // Handlers for Within College files
-  const handleAddWithinFiles = (newItems) => {
+  // Handlers for Academic Certificates
+  const handleAddAcademicFiles = (newItems) => {
     setWithinFiles((prev) => [...prev, ...newItems]);
   };
 
-  const handleUpdateWithin = (id, updates) => {
+  const handleUpdateAcademic = (id, updates) => {
     setWithinFiles((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates, error: null } : item))
     );
   };
 
-  const handleRemoveWithin = (id) => {
+  const handleRemoveAcademic = (id) => {
     setWithinFiles((prev) => {
       const target = prev.find((i) => i.id === id);
       if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
@@ -41,18 +52,18 @@ export function UploadCertificatesStep({
     });
   };
 
-  // Handlers for Outside College files
-  const handleAddOutsideFiles = (newItems) => {
+  // Handlers for Non-Academic Certificates
+  const handleAddNonAcademicFiles = (newItems) => {
     setOutsideFiles((prev) => [...prev, ...newItems]);
   };
 
-  const handleUpdateOutside = (id, updates) => {
+  const handleUpdateNonAcademic = (id, updates) => {
     setOutsideFiles((prev) =>
       prev.map((item) => (item.id === id ? { ...item, ...updates, error: null } : item))
     );
   };
 
-  const handleRemoveOutside = (id) => {
+  const handleRemoveNonAcademic = (id) => {
     setOutsideFiles((prev) => {
       const target = prev.find((i) => i.id === id);
       if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl);
@@ -69,26 +80,26 @@ export function UploadCertificatesStep({
 
     // Validate that all files have titles
     let hasTitleError = false;
-    const validatedWithin = withinFiles.map((item) => {
+    const validatedAcademic = withinFiles.map((item) => {
       if (!item.title || !item.title.trim()) {
         hasTitleError = true;
-        return { ...item, error: 'Title is required for this certificate.' };
+        return { ...item, error: 'Please select an event name or write event name.' };
       }
       return item;
     });
 
-    const validatedOutside = outsideFiles.map((item) => {
+    const validatedNonAcademic = outsideFiles.map((item) => {
       if (!item.title || !item.title.trim()) {
         hasTitleError = true;
-        return { ...item, error: 'Title is required for this certificate.' };
+        return { ...item, error: 'Please select an event name or write event name.' };
       }
       return item;
     });
 
     if (hasTitleError) {
-      setWithinFiles(validatedWithin);
-      setOutsideFiles(validatedOutside);
-      addToast('Please provide a title for all uploaded certificates.', 'error');
+      setWithinFiles(validatedAcademic);
+      setOutsideFiles(validatedNonAcademic);
+      addToast('Please provide an event name / certificate title for all uploads.', 'error');
       return;
     }
 
@@ -103,27 +114,27 @@ export function UploadCertificatesStep({
       formData.append('department', studentData.department);
       formData.append('section', studentData.section);
       formData.append('currentYear', studentData.currentYear || 'I st Year');
-      formData.append('academicYear', studentData.currentYear || 'I st Year');
+      formData.append('passingYear', studentData.passingYear || studentData.passing_year || '2026');
       formData.append('email', studentData.email || '');
 
       const certificatesMeta = [];
 
-      // Append Within College files
+      // Append Academic files
       for (const item of withinFiles) {
         formData.append('files', item.file);
         certificatesMeta.push({
-          category: 'within',
+          category: 'academic',
           title: item.title.trim(),
           issueDate: item.issueDate || null,
           description: item.description?.trim() || null
         });
       }
 
-      // Append Outside College files
+      // Append Non-Academic files
       for (const item of outsideFiles) {
         formData.append('files', item.file);
         certificatesMeta.push({
-          category: 'outside',
+          category: 'non_academic',
           title: item.title.trim(),
           issueDate: item.issueDate || null,
           description: item.description?.trim() || null
@@ -183,7 +194,10 @@ export function UploadCertificatesStep({
               {studentData.name}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              <strong className="text-slate-700 dark:text-slate-300 font-mono tracking-wider">{studentData.regNo}</strong> • Department of {studentData.department} • Section {studentData.section}
+              <strong className="text-slate-700 dark:text-slate-300 font-mono tracking-wider">
+                {studentData.regNo}
+              </strong>{' '}
+              • Department of {studentData.department} • Section {studentData.section}
             </p>
           </div>
         </div>
@@ -198,7 +212,7 @@ export function UploadCertificatesStep({
           <button
             onClick={onBack}
             disabled={isSubmitting}
-            className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5"
+            className="px-4 py-2.5 rounded-xl text-xs sm:text-sm font-semibold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1.5 cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Edit Details</span>
@@ -206,36 +220,41 @@ export function UploadCertificatesStep({
         </div>
       </div>
 
-      {/* SECTION 1: Within College Certificates */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-blue-200/70 dark:border-blue-900/40 rounded-3xl p-6 sm:p-8 shadow-xl shadow-blue-500/5">
-        
+      {/* SECTION 1: Academic Certificates */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-blue-200/80 dark:border-blue-900/40 rounded-3xl p-6 sm:p-8 shadow-xl shadow-blue-500/5 space-y-4">
         {/* Section Heading */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center">
-              <Building2 className="w-5 h-5" />
+            <div className="w-11 h-11 rounded-2xl bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center shadow-sm">
+              <GraduationCap className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                  1. Certificates Earned Within the College
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
+                  1. Academic Certificates
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                   {withinFiles.length}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                Workshops, fests (AURA, Poornima TechFest), department events, internal hackathons & club competitions.
+                Hackathons, Technical Workshops, and other academic technical certifications.
               </p>
             </div>
           </div>
         </div>
 
+        {/* User Required Alert Notice */}
+        <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-semibold flex items-center gap-2.5">
+          <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+          <span>Note: You are not allowed to enter NPTEL certificate here.</span>
+        </div>
+
         {/* Dropzone */}
         <FileDropzone
-          onFilesSelected={handleAddWithinFiles}
-          categoryTitle="Within the College"
-          categoryBadge="Within College"
+          onFilesSelected={handleAddAcademicFiles}
+          categoryTitle="Academic Certificates"
+          categoryBadge="Academic"
           badgeColor="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border-blue-300 dark:border-blue-800"
           addToast={addToast}
         />
@@ -244,15 +263,16 @@ export function UploadCertificatesStep({
         {withinFiles.length > 0 && (
           <div className="mt-6 space-y-4">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Within College Certificates ({withinFiles.length})
+              Academic Certificates ({withinFiles.length})
             </p>
             <AnimatePresence>
               {withinFiles.map((item) => (
                 <FileCard
                   key={item.id}
                   item={item}
-                  onUpdate={(updates) => handleUpdateWithin(item.id, updates)}
-                  onRemove={() => handleRemoveWithin(item.id)}
+                  category="academic"
+                  onUpdate={(updates) => handleUpdateAcademic(item.id, updates)}
+                  onRemove={() => handleRemoveAcademic(item.id)}
                 />
               ))}
             </AnimatePresence>
@@ -260,26 +280,25 @@ export function UploadCertificatesStep({
         )}
       </div>
 
-      {/* SECTION 2: Outside College Certificates */}
-      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-purple-200/70 dark:border-purple-900/40 rounded-3xl p-6 sm:p-8 shadow-xl shadow-purple-500/5">
-        
+      {/* SECTION 2: Non-Academic Certificates */}
+      <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-purple-200/80 dark:border-purple-900/40 rounded-3xl p-6 sm:p-8 shadow-xl shadow-purple-500/5 space-y-4">
         {/* Section Heading */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 flex items-center justify-center">
-              <Globe className="w-5 h-5" />
+            <div className="w-11 h-11 rounded-2xl bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 flex items-center justify-center shadow-sm">
+              <Trophy className="w-6 h-6" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-                  2. Certificates Earned Outside the College
+                <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 dark:text-white">
+                  2. Non-Academic Certificates
                 </h3>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
                   {outsideFiles.length}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                National hackathons (SIH), NPTEL, Coursera, industry internships, IEEE papers & external tech competitions.
+                Sports, Dance, Cultural Events, Volunteering, Student Council Certificates, Kalanidhi, and others.
               </p>
             </div>
           </div>
@@ -287,9 +306,9 @@ export function UploadCertificatesStep({
 
         {/* Dropzone */}
         <FileDropzone
-          onFilesSelected={handleAddOutsideFiles}
-          categoryTitle="Outside the College"
-          categoryBadge="Outside College"
+          onFilesSelected={handleAddNonAcademicFiles}
+          categoryTitle="Non-Academic Certificates"
+          categoryBadge="Non-Academic"
           badgeColor="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-200 border-purple-300 dark:border-purple-800"
           addToast={addToast}
         />
@@ -298,15 +317,16 @@ export function UploadCertificatesStep({
         {outsideFiles.length > 0 && (
           <div className="mt-6 space-y-4">
             <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Outside College Certificates ({outsideFiles.length})
+              Non-Academic Certificates ({outsideFiles.length})
             </p>
             <AnimatePresence>
               {outsideFiles.map((item) => (
                 <FileCard
                   key={item.id}
                   item={item}
-                  onUpdate={(updates) => handleUpdateOutside(item.id, updates)}
-                  onRemove={() => handleRemoveOutside(item.id)}
+                  category="non_academic"
+                  onUpdate={(updates) => handleUpdateNonAcademic(item.id, updates)}
+                  onRemove={() => handleRemoveNonAcademic(item.id)}
                 />
               ))}
             </AnimatePresence>
@@ -337,41 +357,42 @@ export function UploadCertificatesStep({
             />
           </div>
           <p className="text-xs text-slate-400 text-center">
-            Encrypting files and verifying duplicate SHA-256 signatures... Please do not close this window.
+            Securing files and calculating SHA-256 signatures... Please do not close this window.
           </p>
         </motion.div>
       )}
 
-      {/* Navigation Buttons Row */}
+      {/* Navigation Buttons Row - Upload Button Made Bigger! */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 pb-12">
         <button
           type="button"
           onClick={onBack}
           disabled={isSubmitting}
-          className="w-full sm:w-auto px-6 py-3.5 rounded-2xl font-semibold text-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 cursor-pointer"
+          className="w-full sm:w-auto px-6 py-4 rounded-2xl font-semibold text-sm border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
           <span>Back to Step 1</span>
         </button>
 
+        {/* Bigger Upload Button */}
         <button
           type="button"
           onClick={handleFinalSubmit}
           disabled={isSubmitting || totalFilesCount === 0}
-          className={`w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-sm sm:text-base flex items-center justify-center gap-3 shadow-lg transition-all duration-200 ${
+          className={`w-full sm:w-auto px-10 py-5 rounded-2xl font-black text-base sm:text-lg flex items-center justify-center gap-3 shadow-xl transition-all duration-200 ${
             totalFilesCount > 0 && !isSubmitting
-              ? 'bg-gradient-to-r from-piet-600 via-piet-700 to-purpleBrand-600 text-white shadow-piet-500/30 hover:shadow-piet-500/50 hover:scale-[1.02] active:scale-[0.98] cursor-pointer'
+              ? 'bg-gradient-to-r from-piet-600 via-piet-700 to-purpleBrand-600 text-white shadow-piet-500/40 hover:shadow-piet-500/60 hover:scale-[1.03] active:scale-[0.98] cursor-pointer'
               : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none'
           }`}
         >
           {isSubmitting ? (
             <>
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin" />
               <span>Submitting Certificates...</span>
             </>
           ) : (
             <>
-              <CheckCircle2 className="w-5 h-5" />
+              <UploadCloud className="w-6 h-6" />
               <span>Final Submit ({totalFilesCount} Certificate{totalFilesCount === 1 ? '' : 's'})</span>
             </>
           )}

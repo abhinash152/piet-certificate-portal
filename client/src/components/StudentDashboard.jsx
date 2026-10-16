@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Award,
-  Building2,
-  Globe,
+  GraduationCap,
+  Trophy,
   UploadCloud,
   CheckCircle2,
   Clock,
@@ -22,7 +22,9 @@ import {
   Filter,
   Users,
   BookOpen,
-  ShieldCheck
+  ShieldCheck,
+  FileCheck,
+  Info
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { COLLEGE_CONFIG } from '../config/collegeConfig';
@@ -41,7 +43,23 @@ export function StudentDashboard({ onStartUpload, addToast }) {
   const [studentData, setStudentData] = useState(null);
   const [certificates, setCertificates] = useState([]);
   const [summary, setSummary] = useState(null);
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('all'); // 'all', 'academic', 'non_academic'
+
+  // Quick Upload Box 1: Academic Box State
+  const [academicEvent, setAcademicEvent] = useState('');
+  const [academicCustomName, setAcademicCustomName] = useState('');
+  const [academicDate, setAcademicDate] = useState('');
+  const [academicFile, setAcademicFile] = useState(null);
+  const [academicUploading, setAcademicUploading] = useState(false);
+  const academicFileInputRef = useRef(null);
+
+  // Quick Upload Box 2: Non-Academic Box State
+  const [nonAcademicEvent, setNonAcademicEvent] = useState('');
+  const [nonAcademicCustomName, setNonAcademicCustomName] = useState('');
+  const [nonAcademicDate, setNonAcademicDate] = useState('');
+  const [nonAcademicFile, setNonAcademicFile] = useState(null);
+  const [nonAcademicUploading, setNonAcademicUploading] = useState(false);
+  const nonAcademicFileInputRef = useRef(null);
 
   // Preview Modal State
   const [previewCert, setPreviewCert] = useState(null);
@@ -122,6 +140,134 @@ export function StudentDashboard({ onStartUpload, addToast }) {
     }
   }, [mainViewMode, peerDept, peerSection, peerYear, peerCategory, peerSearch]);
 
+  // Handle Quick Upload from Academic Box
+  const handleUploadAcademic = async () => {
+    if (!academicEvent) {
+      addToast('Please select an event name from the dropdown.', 'warning');
+      return;
+    }
+    const finalTitle = academicEvent === 'Others' ? academicCustomName.trim() : academicEvent;
+    if (!finalTitle) {
+      addToast('Please write your event name.', 'warning');
+      return;
+    }
+    if (!academicFile) {
+      addToast('Please select a certificate file to upload.', 'warning');
+      return;
+    }
+
+    setAcademicUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('regNo', studentData?.reg_no || student?.reg_no);
+      formData.append('name', studentData?.name || student?.name);
+      formData.append('department', studentData?.department || student?.department);
+      formData.append('section', studentData?.section || student?.section);
+      formData.append('currentYear', studentData?.current_year || student?.current_year || 'I st Year');
+      formData.append('passingYear', studentData?.passing_year || student?.passing_year || '2026');
+      formData.append('email', studentData?.email || student?.email || '');
+
+      formData.append('files', academicFile);
+      formData.append(
+        'certificatesMeta',
+        JSON.stringify([
+          {
+            category: 'academic',
+            title: finalTitle,
+            issueDate: academicDate || null,
+            description: null
+          }
+        ])
+      );
+
+      const res = await axios.post('/api/certificates/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${studentToken}`
+        }
+      });
+
+      if (res.data.success) {
+        addToast('Academic certificate uploaded successfully!', 'success');
+        setAcademicEvent('');
+        setAcademicCustomName('');
+        setAcademicDate('');
+        setAcademicFile(null);
+        if (academicFileInputRef.current) academicFileInputRef.current.value = '';
+        fetchStudentData();
+      }
+    } catch (err) {
+      console.error('Academic upload failed:', err);
+      addToast(err.response?.data?.message || 'Failed to upload certificate.', 'error');
+    } finally {
+      setAcademicUploading(false);
+    }
+  };
+
+  // Handle Quick Upload from Non-Academic Box
+  const handleUploadNonAcademic = async () => {
+    if (!nonAcademicEvent) {
+      addToast('Please select an event name from the dropdown.', 'warning');
+      return;
+    }
+    const finalTitle = nonAcademicEvent === 'Others' ? nonAcademicCustomName.trim() : nonAcademicEvent;
+    if (!finalTitle) {
+      addToast('Please write your event name.', 'warning');
+      return;
+    }
+    if (!nonAcademicFile) {
+      addToast('Please select a certificate file to upload.', 'warning');
+      return;
+    }
+
+    setNonAcademicUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('regNo', studentData?.reg_no || student?.reg_no);
+      formData.append('name', studentData?.name || student?.name);
+      formData.append('department', studentData?.department || student?.department);
+      formData.append('section', studentData?.section || student?.section);
+      formData.append('currentYear', studentData?.current_year || student?.current_year || 'I st Year');
+      formData.append('passingYear', studentData?.passing_year || student?.passing_year || '2026');
+      formData.append('email', studentData?.email || student?.email || '');
+
+      formData.append('files', nonAcademicFile);
+      formData.append(
+        'certificatesMeta',
+        JSON.stringify([
+          {
+            category: 'non_academic',
+            title: finalTitle,
+            issueDate: nonAcademicDate || null,
+            description: null
+          }
+        ])
+      );
+
+      const res = await axios.post('/api/certificates/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          Authorization: `Bearer ${studentToken}`
+        }
+      });
+
+      if (res.data.success) {
+        addToast('Non-academic certificate uploaded successfully!', 'success');
+        setNonAcademicEvent('');
+        setNonAcademicCustomName('');
+        setNonAcademicDate('');
+        setNonAcademicFile(null);
+        if (nonAcademicFileInputRef.current) nonAcademicFileInputRef.current.value = '';
+        fetchStudentData();
+      }
+    } catch (err) {
+      console.error('Non-academic upload failed:', err);
+      addToast(err.response?.data?.message || 'Failed to upload certificate.', 'error');
+    } finally {
+      setNonAcademicUploading(false);
+    }
+  };
+
   // Open Edit Modal (My Certificates only)
   const handleOpenEdit = (cert) => {
     setEditingCert(cert);
@@ -178,31 +324,34 @@ export function StudentDashboard({ onStartUpload, addToast }) {
     }
   };
 
-  const withinCount = summary?.withinCount || 0;
-  const outsideCount = summary?.outsideCount || 0;
-  const marksInfo = COLLEGE_CONFIG.internalMarks.calculate(withinCount, outsideCount);
+  const academicCount = summary?.academicCount ?? summary?.withinCount ?? 0;
+  const nonAcademicCount = summary?.nonAcademicCount ?? summary?.outsideCount ?? 0;
 
-  const filteredMyCerts = certificates.filter(c => {
-    if (activeTab === 'within') return c.category === 'within';
-    if (activeTab === 'outside') return c.category === 'outside';
+  const filteredMyCerts = certificates.filter((c) => {
+    if (activeTab === 'academic') return c.category === 'academic' || c.category === 'within';
+    if (activeTab === 'non_academic') return c.category === 'non_academic' || c.category === 'outside';
     return true;
   });
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-16">
-      
-      {/* Student Profile & SODECA Overview Banner */}
+      {/* Student Profile Overview Banner */}
       <div className="bg-gradient-to-r from-piet-900 via-piet-800 to-purpleBrand-950 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
         <div className="absolute right-0 top-0 w-80 h-80 bg-white/5 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-mono text-xs font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-white/10 text-white/90 border border-white/20">
+              <span className="font-mono text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-white/10 text-white/90 border border-white/20">
                 {studentData?.reg_no || student?.reg_no}
               </span>
               <span className="text-xs text-white/80">
-                Department of {studentData?.department || student?.department} • Section {studentData?.section || student?.section} • {studentData?.current_year || student?.current_year || 'I st Year'}
+                Department of {studentData?.department || student?.department} • Section{' '}
+                {studentData?.section || student?.section} •{' '}
+                {studentData?.current_year || student?.current_year || 'I st Year'}
+              </span>
+              <span className="font-mono text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                Passing Year: {studentData?.passing_year || student?.passing_year || '2026'}
               </span>
             </div>
 
@@ -214,7 +363,7 @@ export function StudentDashboard({ onStartUpload, addToast }) {
             </p>
           </div>
 
-          {/* Action: Upload More & Print */}
+          {/* Action: Print & Full Dossier */}
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => window.print()}
@@ -229,41 +378,331 @@ export function StudentDashboard({ onStartUpload, addToast }) {
               className="px-5 py-3 rounded-xl bg-gradient-to-r from-piet-500 to-purpleBrand-500 hover:from-piet-400 hover:to-purpleBrand-400 text-white text-xs sm:text-sm font-bold shadow-lg shadow-black/20 flex items-center gap-2 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
               <PlusCircle className="w-4 h-4" />
-              <span>Upload Certificates</span>
+              <span>Batch Upload (Wizard)</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* TWO PROMINENT UPLOAD BOXES (IN PLACE OF SCORE FEATURE) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* BOX 1: ACADEMIC CERTIFICATES BOX */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-blue-200 dark:border-blue-900/50 rounded-3xl p-6 sm:p-7 shadow-xl shadow-blue-500/5 flex flex-col justify-between space-y-5">
+          <div className="space-y-4">
+            {/* Box Header */}
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center shadow-sm">
+                  <GraduationCap className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+                    Academic Certificates
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Upload your technical & academic achievements
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                {academicCount} Uploaded
+              </span>
+            </div>
+
+            {/* Required NPTEL Alert Notice */}
+            <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs font-semibold flex items-center gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <span>Note: You are not allowed to enter NPTEL certificate here.</span>
+            </div>
+
+            {/* Event Name Dropdown */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Event Name <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={academicEvent}
+                onChange={(e) => setAcademicEvent(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
+              >
+                <option value="">-- Select Academic Event --</option>
+                {COLLEGE_CONFIG.events.academic.map((evt) => (
+                  <option key={evt} value={evt}>
+                    {evt}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* If 'Others' is selected, show custom event name input */}
+            {academicEvent === 'Others' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Write Your Event Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={academicCustomName}
+                  onChange={(e) => setAcademicCustomName(e.target.value)}
+                  placeholder="e.g., Smart India Hackathon 2024 or Robotics Workshop"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
+                />
+              </div>
+            )}
+
+            {/* Optional Event Date */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Event Date <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="date"
+                max={new Date().toISOString().split('T')[0]}
+                value={academicDate}
+                onChange={(e) => setAcademicDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            {/* File Chooser Area */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Select Certificate File <span className="text-rose-500">*</span>
+              </label>
+              <div
+                onClick={() => academicFileInputRef.current?.click()}
+                className={`p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer text-center ${
+                  academicFile
+                    ? 'border-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/20'
+                    : 'border-slate-300 dark:border-slate-700 hover:border-blue-400 bg-slate-50/50 dark:bg-slate-800/40'
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={academicFileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setAcademicFile(e.target.files[0]);
+                    }
+                  }}
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx"
+                  className="hidden"
+                />
+                {academicFile ? (
+                  <div className="flex items-center justify-between text-xs text-left">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                          {academicFile.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {(academicFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setAcademicFile(null);
+                        if (academicFileInputRef.current) academicFileInputRef.current.value = '';
+                      }}
+                      className="p-1 text-slate-400 hover:text-rose-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400">
+                    <UploadCloud className="w-6 h-6 text-blue-500" />
+                    <span className="text-xs font-semibold">Click to choose PDF or Image</span>
+                    <span className="text-[10px] text-slate-400">Up to 10 MB</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Big Upload Button */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={handleUploadAcademic}
+              disabled={academicUploading}
+              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-500 hover:to-indigo-600 text-white font-black text-sm sm:text-base shadow-xl shadow-blue-500/25 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50"
+            >
+              {academicUploading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Uploading Academic Certificate...</span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-5 h-5" />
+                  <span>Upload Academic Certificate</span>
+                </>
+              )}
             </button>
           </div>
         </div>
 
-        {/* Live SODECA Progress Card inside Banner */}
-        <div className="mt-6 pt-6 border-t border-white/15 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-          <div className="md:col-span-5">
-            <span className="text-xs text-white/70 uppercase tracking-wider font-semibold">
-              RTU / PIET SODECA Activity Marks Progress
-            </span>
-            <div className="flex items-center gap-3 mt-1">
-              <span className="text-3xl font-black text-white">
-                {marksInfo.score} <span className="text-sm font-normal text-white/60">/ {marksInfo.maxMarks} Marks</span>
+        {/* BOX 2: NON-ACADEMIC CERTIFICATES BOX */}
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-purple-200 dark:border-purple-900/50 rounded-3xl p-6 sm:p-7 shadow-xl shadow-purple-500/5 flex flex-col justify-between space-y-5">
+          <div className="space-y-4">
+            {/* Box Header */}
+            <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-200 dark:border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 flex items-center justify-center shadow-sm">
+                  <Trophy className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-extrabold text-slate-900 dark:text-white">
+                    Non-Academic Certificates
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Upload co-curricular, sports & cultural events
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                {nonAcademicCount} Uploaded
               </span>
-              <span className={`text-xs font-bold px-3 py-0.5 rounded-full border ${marksInfo.gradeColor}`}>
-                Grade {marksInfo.grade.split(' ')[0]}
-              </span>
+            </div>
+
+            {/* Event Name Dropdown */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Event Name <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={nonAcademicEvent}
+                onChange={(e) => setNonAcademicEvent(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
+              >
+                <option value="">-- Select Non-Academic Event --</option>
+                {COLLEGE_CONFIG.events.nonAcademic.map((evt) => (
+                  <option key={evt} value={evt}>
+                    {evt}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* If 'Others' is selected, show custom event name input */}
+            {nonAcademicEvent === 'Others' && (
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Write Your Event Name <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={nonAcademicCustomName}
+                  onChange={(e) => setNonAcademicCustomName(e.target.value)}
+                  placeholder="e.g., Annual Sports Meet, Blood Donation Camp, etc."
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
+                />
+              </div>
+            )}
+
+            {/* Optional Event Date */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Event Date <span className="text-slate-400 font-normal">(Optional)</span>
+              </label>
+              <input
+                type="date"
+                max={new Date().toISOString().split('T')[0]}
+                value={nonAcademicDate}
+                onChange={(e) => setNonAcademicDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
+              />
+            </div>
+
+            {/* File Chooser Area */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                Select Certificate File <span className="text-rose-500">*</span>
+              </label>
+              <div
+                onClick={() => nonAcademicFileInputRef.current?.click()}
+                className={`p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer text-center ${
+                  nonAcademicFile
+                    ? 'border-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/20'
+                    : 'border-slate-300 dark:border-slate-700 hover:border-purple-400 bg-slate-50/50 dark:bg-slate-800/40'
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={nonAcademicFileInputRef}
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      setNonAcademicFile(e.target.files[0]);
+                    }
+                  }}
+                  accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.doc,.docx"
+                  className="hidden"
+                />
+                {nonAcademicFile ? (
+                  <div className="flex items-center justify-between text-xs text-left">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileCheck className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                      <div>
+                        <p className="font-bold text-slate-800 dark:text-slate-200 truncate">
+                          {nonAcademicFile.name}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          {(nonAcademicFile.size / 1024).toFixed(1)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setNonAcademicFile(null);
+                        if (nonAcademicFileInputRef.current) nonAcademicFileInputRef.current.value = '';
+                      }}
+                      className="p-1 text-slate-400 hover:text-rose-500"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center gap-1 text-slate-500 dark:text-slate-400">
+                    <UploadCloud className="w-6 h-6 text-purple-500" />
+                    <span className="text-xs font-semibold">Click to choose PDF or Image</span>
+                    <span className="text-[10px] text-slate-400">Up to 10 MB</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="md:col-span-7">
-            <div className="w-full h-3 rounded-full bg-white/10 overflow-hidden mb-2">
-              <div
-                className="h-full bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full transition-all duration-500"
-                style={{ width: `${marksInfo.percentage}%` }}
-              />
-            </div>
-            <div className="flex justify-between text-[11px] text-white/70">
-              <span>{withinCount} Within College ({withinCount * 5} pts)</span>
-              <span>{outsideCount} Outside College ({outsideCount * 10} pts)</span>
-              <span className="font-semibold text-white">{marksInfo.percentage}% Target Reached</span>
-            </div>
+          {/* Big Upload Button */}
+          <div className="pt-2">
+            <button
+              type="button"
+              onClick={handleUploadNonAcademic}
+              disabled={nonAcademicUploading}
+              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-purpleBrand-600 via-purple-700 to-indigo-700 hover:from-purpleBrand-500 hover:to-indigo-600 text-white font-black text-sm sm:text-base shadow-xl shadow-purpleBrand-500/25 flex items-center justify-center gap-2.5 transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer disabled:opacity-50"
+            >
+              {nonAcademicUploading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Uploading Non-Academic Certificate...</span>
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="w-5 h-5" />
+                  <span>Upload Non-Academic Certificate</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
+
       </div>
 
       {/* TOP NAVIGATION TABS: MY PORTFOLIO vs PEER SHOWCASE */}
@@ -296,7 +735,6 @@ export function StudentDashboard({ onStartUpload, addToast }) {
       {/* VIEW 1: MY CERTIFICATES */}
       {mainViewMode === 'my_portfolio' && (
         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl">
-          
           {/* Header & Category Tabs */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-slate-200 dark:border-slate-800">
             <div>
@@ -321,26 +759,26 @@ export function StudentDashboard({ onStartUpload, addToast }) {
                 All ({certificates.length})
               </button>
               <button
-                onClick={() => setActiveTab('within')}
+                onClick={() => setActiveTab('academic')}
                 className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 ${
-                  activeTab === 'within'
+                  activeTab === 'academic'
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-blue-600 dark:text-blue-400'
                 }`}
               >
-                <Building2 className="w-3.5 h-3.5" />
-                <span>Within ({withinCount})</span>
+                <GraduationCap className="w-3.5 h-3.5" />
+                <span>Academic ({academicCount})</span>
               </button>
               <button
-                onClick={() => setActiveTab('outside')}
+                onClick={() => setActiveTab('non_academic')}
                 className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 ${
-                  activeTab === 'outside'
+                  activeTab === 'non_academic'
                     ? 'bg-purpleBrand-600 text-white shadow-sm'
                     : 'text-purpleBrand-600 dark:text-purpleBrand-400'
                 }`}
               >
-                <Globe className="w-3.5 h-3.5" />
-                <span>Outside ({outsideCount})</span>
+                <Trophy className="w-3.5 h-3.5" />
+                <span>Non-Academic ({nonAcademicCount})</span>
               </button>
             </div>
           </div>
@@ -359,17 +797,20 @@ export function StudentDashboard({ onStartUpload, addToast }) {
               </p>
               <button
                 onClick={onStartUpload}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-piet-600 text-white text-xs font-bold hover:bg-piet-700 cursor-pointer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-piet-600 text-white text-xs font-bold hover:bg-piet-700 cursor-pointer shadow"
               >
                 <PlusCircle className="w-4 h-4" />
-                <span>Upload Your First Certificate</span>
+                <span>Upload First Certificate</span>
               </button>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-6">
               {filteredMyCerts.map((cert) => {
-                const isImage = cert.mime_type?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(cert.stored_filename);
+                const isImage =
+                  cert.mime_type?.startsWith('image/') ||
+                  /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(cert.stored_filename);
                 const fileUrl = getFileUrl(cert.file_path);
+                const isAcademic = cert.category === 'academic' || cert.category === 'within';
 
                 return (
                   <div
@@ -398,7 +839,9 @@ export function StudentDashboard({ onStartUpload, addToast }) {
                         ) : (
                           <div className="flex flex-col items-center justify-center text-slate-400 gap-1">
                             <FileText className="w-8 h-8 text-piet-500" />
-                            <span className="text-[11px] font-bold uppercase">{cert.original_filename.split('.').pop()}</span>
+                            <span className="text-[11px] font-bold uppercase">
+                              {cert.original_filename?.split('.').pop() || 'DOC'}
+                            </span>
                           </div>
                         )}
 
@@ -410,12 +853,14 @@ export function StudentDashboard({ onStartUpload, addToast }) {
 
                       {/* Category & Status Badge */}
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                          cert.category === 'within'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                            : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                        }`}>
-                          {cert.category === 'within' ? 'Within College' : 'Outside College'}
+                        <span
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                            isAcademic
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                              : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                          }`}
+                        >
+                          {isAcademic ? 'Academic' : 'Non-Academic'}
                         </span>
 
                         {cert.status === 'flagged' ? (
@@ -455,7 +900,7 @@ export function StudentDashboard({ onStartUpload, addToast }) {
                       )}
                     </div>
 
-                    {/* Actions Row (Owner Can Edit/Delete) */}
+                    {/* Actions Row */}
                     <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 mt-3">
                       <button
                         onClick={() => {
@@ -491,14 +936,12 @@ export function StudentDashboard({ onStartUpload, addToast }) {
               })}
             </div>
           )}
-
         </div>
       )}
 
       {/* VIEW 2: PEER SHOWCASE (STRICTLY READ-ONLY) */}
       {mainViewMode === 'peer_showcase' && (
         <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl p-6 sm:p-8 shadow-xl space-y-6">
-          
           {/* Showcase Info Banner */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200 dark:border-blue-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -514,7 +957,7 @@ export function StudentDashboard({ onStartUpload, addToast }) {
                   </span>
                 </h3>
                 <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
-                  Browse achievements, national hackathons, and certifications completed by your fellow students across all 8 sections and departments.
+                  Browse achievements, hackathons, and certifications completed by your fellow students across all sections.
                 </p>
               </div>
             </div>
@@ -526,7 +969,6 @@ export function StudentDashboard({ onStartUpload, addToast }) {
 
           {/* Search & Filter Bar */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            
             {/* Search */}
             <div className="relative sm:col-span-2 lg:col-span-2">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -547,96 +989,73 @@ export function StudentDashboard({ onStartUpload, addToast }) {
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
               >
                 <option value="ALL">All Departments</option>
-                {COLLEGE_CONFIG.departments.map(d => (
-                  <option key={d.id} value={d.id}>{d.short}</option>
+                {COLLEGE_CONFIG.departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.short}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Section Filter (8 sections) */}
+            {/* Section Filter */}
             <div>
               <select
                 value={peerSection}
                 onChange={(e) => setPeerSection(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
               >
-                <option value="ALL">All 8 Sections</option>
-                {COLLEGE_CONFIG.sections.map(sec => (
-                  <option key={sec} value={sec}>Section {sec}</option>
+                <option value="ALL">All Sections</option>
+                {COLLEGE_CONFIG.sections.map((sec) => (
+                  <option key={sec} value={sec}>
+                    Section {sec}
+                  </option>
                 ))}
               </select>
             </div>
 
-            {/* Year Filter */}
+            {/* Category Filter */}
             <div>
               <select
-                value={peerYear}
-                onChange={(e) => setPeerYear(e.target.value)}
+                value={peerCategory}
+                onChange={(e) => setPeerCategory(e.target.value)}
                 className="w-full px-3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs focus:outline-none focus:border-piet-500 text-slate-900 dark:text-white"
               >
-                <option value="ALL">All Years</option>
-                {COLLEGE_CONFIG.currentYears.map(yr => (
-                  <option key={yr} value={yr}>{yr}</option>
-                ))}
+                <option value="ALL">All Categories</option>
+                <option value="academic">Academic Certificates</option>
+                <option value="non_academic">Non-Academic Certificates</option>
               </select>
             </div>
-
           </div>
 
           {/* Peer Certificates Grid */}
           {peerLoading ? (
             <div className="py-16 text-center text-slate-400">
               <div className="w-8 h-8 border-2 border-piet-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <span>Fetching peer achievements...</span>
+              <span>Fetching peer certificates...</span>
             </div>
           ) : peerCertificates.length === 0 ? (
-            <div className="py-16 text-center text-slate-400 space-y-2">
-              <Users className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto" />
-              <p className="font-semibold text-slate-700 dark:text-slate-300 text-sm">
-                No peer certificates found matching your filters.
+            <div className="py-16 text-center text-slate-400">
+              <Users className="w-12 h-12 text-slate-300 dark:text-slate-700 mx-auto mb-2" />
+              <p className="font-semibold text-slate-600 dark:text-slate-400">
+                No peer certificates found matching your criteria.
               </p>
-              <button
-                onClick={() => {
-                  setPeerSearch('');
-                  setPeerDept('ALL');
-                  setPeerSection('ALL');
-                  setPeerYear('ALL');
-                  setPeerCategory('ALL');
-                }}
-                className="text-xs text-piet-600 hover:underline cursor-pointer"
-              >
-                Reset Filters
-              </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {peerCertificates.map((cert) => {
-                const isImage = cert.mime_type?.startsWith('image/') || /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(cert.stored_filename);
+                const isImage =
+                  cert.mime_type?.startsWith('image/') ||
+                  /\.(jpg|jpeg|png|webp|gif|svg)$/i.test(cert.stored_filename);
                 const fileUrl = getFileUrl(cert.file_path);
+                const isAcademic = cert.category === 'academic' || cert.category === 'within';
 
                 return (
                   <div
                     key={cert.id}
-                    className="rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-piet-400 bg-white dark:bg-slate-900 p-4 flex flex-col justify-between transition-all shadow-sm hover:shadow-md"
+                    className="rounded-2xl border border-slate-200 dark:border-slate-800 p-4 bg-white dark:bg-slate-900 hover:border-piet-400 transition-all shadow-sm flex flex-col justify-between"
                   >
                     <div>
-                      {/* Student Identity Pill */}
-                      <div className="flex items-center justify-between gap-2 mb-2 pb-2 border-b border-slate-100 dark:border-slate-800">
-                        <div>
-                          <span className="text-xs font-bold text-slate-900 dark:text-white block truncate max-w-[170px]">
-                            {cert.student_name}
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {cert.student_reg_no}
-                          </span>
-                        </div>
-
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                          {cert.department} • Sec {cert.section}
-                        </span>
-                      </div>
-
-                      {/* Thumbnail Preview */}
+                      {/* Peer Thumbnail */}
                       <div
                         onClick={() => {
                           setPreviewCert(cert);
@@ -653,28 +1072,32 @@ export function StudentDashboard({ onStartUpload, addToast }) {
                         ) : (
                           <div className="flex flex-col items-center justify-center text-slate-400 gap-1">
                             <FileText className="w-8 h-8 text-piet-500" />
-                            <span className="text-[11px] font-bold uppercase">{cert.original_filename.split('.').pop()}</span>
+                            <span className="text-[10px] font-bold uppercase">
+                              {cert.original_filename?.split('.').pop() || 'DOC'}
+                            </span>
                           </div>
                         )}
 
                         <div className="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white gap-1 text-xs font-bold">
                           <Eye className="w-4 h-4" />
-                          <span>View Certificate</span>
+                          <span>View Preview</span>
                         </div>
                       </div>
 
-                      {/* Category Badge */}
+                      {/* Peer Student Info */}
                       <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
-                          cert.category === 'within'
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
-                            : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
-                        }`}>
-                          {cert.category === 'within' ? 'Within College' : 'Outside College'}
+                        <span
+                          className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full ${
+                            isAcademic
+                              ? 'bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300'
+                              : 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                          }`}
+                        >
+                          {isAcademic ? 'Academic' : 'Non-Academic'}
                         </span>
 
-                        <span className="text-[10px] text-slate-400">
-                          {cert.current_year || 'I st Year'}
+                        <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                          Sec {cert.student_section} • {cert.student_dept}
                         </span>
                       </div>
 
@@ -682,31 +1105,28 @@ export function StudentDashboard({ onStartUpload, addToast }) {
                         {cert.title}
                       </h4>
 
+                      <p className="text-xs text-piet-600 dark:text-piet-400 font-medium mt-1">
+                        By: {cert.student_name}
+                      </p>
+
                       {cert.issue_date && (
-                        <p className="text-[11px] text-slate-500 flex items-center gap-1 mt-1">
+                        <p className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
                           <Calendar className="w-3 h-3" />
                           <span>{cert.issue_date}</span>
                         </p>
                       )}
-
-                      {cert.description && (
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2">
-                          {cert.description}
-                        </p>
-                      )}
                     </div>
 
-                    {/* View Only Action Button */}
-                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2 mt-3">
+                    <div className="pt-3 border-t border-slate-100 dark:border-slate-800 mt-3 flex items-center justify-between">
                       <button
                         onClick={() => {
                           setPreviewCert(cert);
                           setIsPeerPreview(true);
                         }}
-                        className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-piet-50 dark:hover:bg-piet-950 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-piet-600 dark:hover:text-piet-300 flex items-center justify-center gap-1.5 transition-colors cursor-pointer border border-slate-200/60 dark:border-slate-700/60"
+                        className="text-xs font-semibold text-piet-600 dark:text-piet-400 hover:underline flex items-center gap-1 cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
-                        <span>View Certificate (Read-Only)</span>
+                        <span>Inspect Details</span>
                       </button>
                     </div>
                   </div>
@@ -714,103 +1134,106 @@ export function StudentDashboard({ onStartUpload, addToast }) {
               })}
             </div>
           )}
-
         </div>
       )}
 
-      {/* EDIT CERTIFICATE MODAL (MY CERTIFICATES ONLY) */}
-      {editingCert && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm -z-0" onClick={() => setEditingCert(null)} />
-          <div className="relative z-10 w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                Edit Certificate Details
-              </h3>
-              <button onClick={() => setEditingCert(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* EDIT MODAL (My Certificates) */}
+      <AnimatePresence>
+        {editingCert && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setEditingCert(null)}
+              className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative z-10 w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+                <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
+                  <Edit3 className="w-4 h-4 text-piet-600" />
+                  <span>Update Certificate Record</span>
+                </h3>
+                <button onClick={() => setEditingCert(null)} className="p-1 text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Certificate Title / Event
-              </label>
-              <input
-                type="text"
-                value={editTitle}
-                onChange={(e) => setEditTitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:border-piet-500"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Event Name / Title *
+                </label>
+                <input
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Event / Issue Date
-              </label>
-              <input
-                type="date"
-                value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:border-piet-500"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Event Date (Optional)
+                </label>
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white"
+                />
+              </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                Description / Organizing Body
-              </label>
-              <textarea
-                rows="2"
-                value={editDescription}
-                onChange={(e) => setEditDescription(e.target.value)}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-sm focus:outline-none focus:border-piet-500"
-              />
-            </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Description / Organizing Body (Optional)
+                </label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs sm:text-sm text-slate-900 dark:text-white"
+                />
+              </div>
 
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditingCert(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={savingEdit}
-                onClick={handleSaveEdit}
-                className="px-5 py-2 rounded-xl bg-piet-600 text-white font-bold text-xs hover:bg-piet-700 cursor-pointer"
-              >
-                {savingEdit ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingCert(null)}
+                  className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveEdit}
+                  disabled={savingEdit}
+                  className="px-5 py-2 rounded-xl bg-piet-600 text-white text-xs font-bold hover:bg-piet-700 cursor-pointer"
+                >
+                  {savingEdit ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </motion.div>
           </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
 
-      {/* FULLSCREEN CERTIFICATE VIEWER MODAL (SUPPORTS BOTH MY CERTS AND READ-ONLY PEER CERTS) */}
+      {/* FULLSCREEN CERTIFICATE VIEWER MODAL */}
       {previewCert && (
         <CertificateViewerModal
           certificate={previewCert}
-          student={isPeerPreview ? {
-            name: previewCert.student_name,
-            reg_no: previewCert.student_reg_no,
-            department: previewCert.department,
-            section: previewCert.section,
-            current_year: previewCert.current_year
-          } : studentData}
+          student={studentData || student}
           token={studentToken}
           readOnly={isPeerPreview}
-          onClose={() => {
-            setPreviewCert(null);
-            setIsPeerPreview(false);
-          }}
+          onClose={() => setPreviewCert(null)}
           onRefresh={fetchStudentData}
           addToast={addToast}
         />
       )}
-
     </div>
   );
 }

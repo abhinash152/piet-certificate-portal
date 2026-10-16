@@ -10,7 +10,7 @@ import { calculateHash, sanitizeFilename, sanitizePathComponent } from '../utils
 const router = express.Router();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const uploadsBaseDir = path.resolve(__dirname, '../../uploads');
+const uploadsBaseDir = process.env.UPLOADS_DIR ? path.resolve(process.env.UPLOADS_DIR) : path.resolve(__dirname, '../../uploads');
 
 /**
  * POST /api/certificates/upload
@@ -18,7 +18,7 @@ const uploadsBaseDir = path.resolve(__dirname, '../../uploads');
  */
 router.post('/upload', upload.array('files', 20), (req, res) => {
   try {
-    const { regNo, name, department, section, email, currentYear, certificatesMeta } = req.body;
+    const { regNo, name, department, section, email, currentYear, passingYear, certificatesMeta } = req.body;
 
     if (!regNo || !department || !section) {
       return res.status(400).json({
@@ -48,6 +48,7 @@ router.post('/upload', upload.array('files', 20), (req, res) => {
     const cleanDept = sanitizePathComponent(department);
     const cleanSection = sanitizePathComponent(section.toUpperCase());
     const cleanYear = currentYear ? currentYear.trim() : 'I st Year';
+    const cleanPassingYear = passingYear ? passingYear.trim() : '2026';
     const studentName = (name && name.trim()) || `Student ${cleanRegNo}`;
     const studentEmail = email ? email.trim() : null;
     const now = new Date().toISOString();
@@ -63,7 +64,10 @@ router.post('/upload', upload.array('files', 20), (req, res) => {
     for (let i = 0; i < req.files.length; i++) {
       const file = req.files[i];
       const meta = metadataList[i] || {};
-      const category = (meta.category === 'outside') ? 'outside' : 'within';
+      const rawCategory = meta.category || '';
+      const category = (rawCategory === 'non_academic' || rawCategory === 'non-academic' || rawCategory === 'outside') 
+        ? 'non_academic' 
+        : 'academic';
       const title = (meta.title && meta.title.trim()) || file.originalname;
       const issueDate = meta.issueDate || null;
       const description = meta.description || null;
@@ -99,19 +103,20 @@ router.post('/upload', upload.array('files', 20), (req, res) => {
       });
     }
 
-    // 2. Insert or update student record with current_year
+    // 2. Insert or update student record with current_year and passing_year
     const upsertStudent = db.prepare(`
-      INSERT INTO students (reg_no, name, department, section, current_year, email, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO students (reg_no, name, department, section, current_year, passing_year, email, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(reg_no) DO UPDATE SET
         name = excluded.name,
         department = excluded.department,
         section = excluded.section,
         email = COALESCE(excluded.email, students.email),
         current_year = COALESCE(excluded.current_year, students.current_year),
+        passing_year = COALESCE(excluded.passing_year, students.passing_year),
         updated_at = excluded.updated_at
     `);
-    upsertStudent.run(cleanRegNo, studentName, cleanDept, cleanSection, cleanYear, studentEmail, now, now);
+    upsertStudent.run(cleanRegNo, studentName, cleanDept, cleanSection, cleanYear, cleanPassingYear, studentEmail, now, now);
 
     // 3. Save files to disk and insert certificates
     const insertCert = db.prepare(`
@@ -123,13 +128,13 @@ router.post('/upload', upload.array('files', 20), (req, res) => {
     `);
 
     const savedCertificates = [];
-    let withinCount = 0;
-    let outsideCount = 0;
+    let academicCount = 0;
+    let nonAcademicCount = 0;
 
     for (const item of preparedUploads) {
       const { file, category, title, issueDate, description, fileHash } = item;
 
-      // Directory: uploads/<department>/<section>/<regNo>/<within|outside>/
+      // Directory: uploads/<department>/<section>/<regNo>/<academic|non_academic>/
       const targetDir = path.join(uploadsBaseDir, cleanDept, cleanSection, cleanRegNo, category);
       if (!fs.existsSync(targetDir)) {
         fs.mkdirSync(targetDir, { recursive: true });
@@ -161,8 +166,8 @@ router.post('/upload', upload.array('files', 20), (req, res) => {
         now
       );
 
-      if (category === 'within') withinCount++;
-      else outsideCount++;
+      if (category === 'academic') academicCount++;
+      else nonAcademicCount++;
 
       savedCertificates.push({
         id: certId,
@@ -174,8 +179,8 @@ router.post('/upload', upload.array('files', 20), (req, res) => {
     }
 
     // Get updated total counts for student
-    const totalWithin = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE student_reg_no = ? AND category = 'within'").get(cleanRegNo).count;
-    const totalOutside = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE student_reg_no = ? AND category = 'outside'").get(cleanRegNo).count;
+    const totalAcademic = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE student_reg_no = ? AND category IN ('academic', 'within')").get(cleanRegNo).count;
+    const totalNonAcademic = db.prepare("SELECT COUNT(*) as count FROM certificates WHERE student_reg_no = ? AND category IN ('non_academic', 'non-academic', 'outside')").get(cleanRegNo).count;
 
     return res.status(201).json({
       success: true,
@@ -185,12 +190,18 @@ router.post('/upload', upload.array('files', 20), (req, res) => {
         name: studentName,
         department: cleanDept,
         section: cleanSection,
+        passingYear: cleanPassingYear,
         newBatchCount: savedCertificates.length,
-        newWithinCount: withinCount,
-        newOutsideCount: outsideCount,
-        totalWithinCount: totalWithin,
-        totalOutsideCount: totalOutside,
-        totalCertificates: totalWithin + totalOutside
+        newAcademicCount: academicCount,
+        newNonAcademicCount: nonAcademicCount,
+        totalAcademicCount: totalAcademic,
+        totalNonAcademicCount: totalNonAcademic,
+        totalCertificates: totalAcademic + totalNonAcademic,
+        // Legacy compatibility
+        newWithinCount: academicCount,
+        newOutsideCount: nonAcademicCount,
+        totalWithinCount: totalAcademic,
+        totalOutsideCount: totalNonAcademic
       },
       certificates: savedCertificates
     });

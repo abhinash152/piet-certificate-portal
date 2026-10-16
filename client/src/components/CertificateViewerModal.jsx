@@ -83,11 +83,11 @@ export function CertificateViewerModal({ certificate, student, token, onClose, o
           <div className="flex items-center justify-between p-5 sm:p-6 border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3">
               <span className={`text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full border ${
-                certificate.category === 'within'
+                certificate.category === 'academic' || certificate.category === 'within'
                   ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800'
                   : 'bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800'
               }`}>
-                {certificate.category === 'within' ? 'Within College' : 'Outside College'}
+                {certificate.category === 'academic' || certificate.category === 'within' ? 'Academic Certificate' : 'Non-Academic Certificate'}
               </span>
               {certificate.status === 'flagged' && (
                 <span className="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1">

@@ -34,35 +34,33 @@ export const COLLEGE_CONFIG = {
     "IV th Year"
   ],
 
-  // SODECA / Internal Marks Evaluation Scheme (PIET / RTU Guidelines)
-  internalMarks: {
-    withinPoints: 5,        // 5 points per within-college workshop/fest
-    outsidePoints: 10,      // 10 points per national hackathon / NPTEL / Coursera
-    maxMarks: 50,           // Capped maximum internal activity marks
-    calculate: (withinCount = 0, outsideCount = 0) => {
-      const raw = (withinCount * 5) + (outsideCount * 10);
-      const score = Math.min(50, raw);
-      const percentage = Math.round((score / 50) * 100);
-      
-      let grade = "C (Needs Improvement)";
-      let gradeColor = "text-amber-600 bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800";
-      
-      if (score >= 45) {
-        grade = "O (Outstanding)";
-        gradeColor = "text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 dark:border-emerald-800";
-      } else if (score >= 38) {
-        grade = "A+ (Excellent)";
-        gradeColor = "text-blue-700 bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800";
-      } else if (score >= 30) {
-        grade = "A (Very Good)";
-        gradeColor = "text-indigo-700 bg-indigo-50 dark:bg-indigo-950/40 border-indigo-300 dark:border-indigo-800";
-      } else if (score >= 20) {
-        grade = "B (Good)";
-        gradeColor = "text-purple-700 bg-purple-50 dark:bg-purple-950/40 border-purple-300 dark:border-purple-800";
-      }
+  // Passing Year options
+  passingYears: [
+    "2024",
+    "2025",
+    "2026",
+    "2027",
+    "2028",
+    "2029",
+    "2030"
+  ],
 
-      return { score, maxMarks: 50, percentage, grade, gradeColor, rawScore: raw };
-    }
+  // Event dropdown options
+  events: {
+    academic: [
+      "Hackathon",
+      "Technical Workshop",
+      "Others"
+    ],
+    nonAcademic: [
+      "Sports",
+      "Dance",
+      "Cultural Event",
+      "Volunteering",
+      "Student Council Certificates",
+      "Kalanidhi",
+      "Others"
+    ]
   },
 
   // Registration Number formatting & validation rules
@@ -76,22 +74,27 @@ export const COLLEGE_CONFIG = {
 
   // Certificate categories
   categories: {
-    within: {
-      id: "within",
-      title: "Certificates Earned Within the College",
-      badge: "Within College",
+    academic: {
+      id: "academic",
+      title: "Academic Certificates",
+      badge: "Academic",
       badgeColor: "bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 border-blue-200 dark:border-blue-800",
-      description: "Workshops, fests, department events, internal hackathons, sports, cultural competitions & club activities.",
-      icon: "Building2",
+      description: "Hackathons, Technical Workshops, and other academic technical events.",
+      icon: "GraduationCap",
+      options: ["Hackathon", "Technical Workshop", "Others"]
     },
-    outside: {
-      id: "outside",
-      title: "Certificates Earned Outside the College",
-      badge: "Outside College",
+    non_academic: {
+      id: "non_academic",
+      title: "Non-Academic Certificates",
+      badge: "Non-Academic",
       badgeColor: "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 border-purple-200 dark:border-purple-800",
-      description: "National hackathons, NPTEL, Coursera, industry internships, IEEE papers & external tech competitions.",
-      icon: "Globe",
-    }
+      description: "Sports, Dance, Cultural Events, Volunteering, Student Council Certificates, Kalanidhi, and others.",
+      icon: "Trophy",
+      options: ["Sports", "Dance", "Cultural Event", "Volunteering", "Student Council Certificates", "Kalanidhi", "Others"]
+    },
+    // Backwards compatibility aliases
+    get within() { return this.academic; },
+    get outside() { return this.non_academic; }
   },
 
   // Allowed upload file rules

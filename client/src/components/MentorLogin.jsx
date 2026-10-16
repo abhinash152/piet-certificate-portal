@@ -34,13 +34,6 @@ export function MentorLogin({ onSuccess, addToast }) {
     }
   };
 
-  const handleQuickFillDemo = () => {
-    setIdentifier('mentor@piet.poornima.org');
-    setPassword('piet@mentor2025');
-    setError('');
-    addToast('Demo credentials pre-filled. Click Sign In to enter.', 'info');
-  };
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -57,7 +50,7 @@ export function MentorLogin({ onSuccess, addToast }) {
             <ShieldCheck className="w-7 h-7" />
           </div>
           <span className="text-xs font-bold uppercase tracking-widest text-purpleBrand-600 dark:text-purpleBrand-400">
-            Internal Marks & Verification
+            Certificate Verification & Administration
           </span>
           <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight mt-1">
             Mentor & Admin Portal
@@ -65,30 +58,6 @@ export function MentorLogin({ onSuccess, addToast }) {
           <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
             Secure access for PIET faculty mentors to review, verify and export student achievement portfolios.
           </p>
-        </div>
-
-        {/* Quick Demo Credentials Pill */}
-        <div className="mb-6 p-3.5 rounded-2xl bg-gradient-to-r from-purple-50 to-piet-50 dark:from-purple-950/40 dark:to-piet-950/40 border border-purple-200 dark:border-purple-800/60">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-purpleBrand-500" />
-              <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                Default Demo Mentor
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleQuickFillDemo}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-purpleBrand-600 dark:text-purpleBrand-400 border border-purple-200 dark:border-purple-700 shadow-sm hover:scale-105 active:scale-95 transition-all cursor-pointer"
-            >
-              Auto-Fill
-            </button>
-          </div>
-          <div className="text-[11px] text-slate-600 dark:text-slate-400 mt-1 font-mono">
-            <span>Email: <strong>mentor@piet.poornima.org</strong></span>
-            <span className="mx-1">•</span>
-            <span>Pass: <strong>piet@mentor2025</strong></span>
-          </div>
         </div>
 
         {error && (
